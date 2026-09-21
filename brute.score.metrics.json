@@ -1,0 +1,14 @@
+{
+  "orders": 4,
+  "plans": 2,
+  "rounds": 3,
+  "knives": 8,
+  "finished_weight": 54.74853517410932,
+  "blank_weight": 706.5,
+  "yield_rate": 0.07749261878854823,
+  "coverage": 0.75,
+  "objective": "score",
+  "pdf_score": 58.09970475154193,
+  "elapsed_seconds": 0.00598760000002585,
+  "optimality": "proven_in_configured_model"
+}

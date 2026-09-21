@@ -1,0 +1,96 @@
+{
+  "package_created": true,
+  "official_acceptance_verified": false,
+  "complete_original_order_coverage": false,
+  "input_result": "D:\\02_Projects\\ML\\jinyinsai1\\runs\\pattern_dp_exact\\result.json",
+  "source_order_count": 5000,
+  "included_order_count": 4999,
+  "combination_coverage_over_source": 0.9996,
+  "excluded_orders": [
+    {
+      "line": 850,
+      "order_id": "A20260949",
+      "reason": "nonpositive_length",
+      "original": {
+        "订单号": "A20260949",
+        "订单重量(t)": "22.344",
+        "坯料钢种": "SALE04",
+        "订单直径(mm)": "27.80 ",
+        "订单定尺(mm)": "-1100",
+        "所有密度为9.86 g/cm^3": ""
+      }
+    }
+  ],
+  "model_assumptions": [
+    "One shared 1 metre trim at each round end; never added to length_scheme",
+    "100 rounds algorithmic cap, not specified by supplied constraints",
+    "aggregate blank material accounting; no per-blank packing rules supplied",
+    "lexicographic objective; official baseline knife count unavailable",
+    "Extra pieces <= floor(demand pieces * 0) per order; not an officially confirmed upper bound"
+  ],
+  "before": {
+    "orders": 4999,
+    "plans": 116,
+    "rounds": 6571,
+    "knives": 115558,
+    "finished_weight": 251117969.68865994,
+    "blank_weight": 271758855.0,
+    "yield_rate": 0.9240470552051007,
+    "coverage": 0.9997999599919984,
+    "objective": "lex",
+    "length_mode": "net_shared_trim"
+  },
+  "after": {
+    "orders": 4999,
+    "plans": 116,
+    "rounds": 6571,
+    "knives": 115558,
+    "finished_weight": 251117969.6886601,
+    "blank_weight": 271758855.0,
+    "yield_rate": 0.9240470552051012,
+    "coverage": 0.9997999599919984,
+    "objective": "lex",
+    "length_mode": "net_shared_trim"
+  },
+  "production": {
+    "per_order_extra_limit": 0,
+    "orders_with_extra_pieces": 0,
+    "max_actual_extra_ratio": 0.0,
+    "rounded_demand_kg": 251117969.6886611,
+    "extra_kg": -1.0132789611816406e-06,
+    "mass_weighted_extra_ratio": -3.9968028886505635e-15
+  },
+  "independent_platform_check": {
+    "passed": true,
+    "error_counts": {},
+    "errors": {},
+    "valid_orders": 4999,
+    "excluded_invalid_orders": [
+      "A20260949"
+    ],
+    "source_orders": 5000,
+    "round_count": 6571,
+    "min_physical_length_m": 50.0,
+    "max_physical_length_m": 150.0,
+    "max_round_weight_kg": 59998.94890233711,
+    "official_acceptance_verified": false,
+    "weight_check": "conservative pi-based physical round mass including 2m shared trim"
+  },
+  "json_file": "D:\\02_Projects\\ML\\jinyinsai1\\submission_optimized_exact\\初赛结果_棒材优化.json",
+  "zip_file": "D:\\02_Projects\\ML\\jinyinsai1\\submission_optimized_exact\\初赛结果_棒材优化.zip",
+  "json_sha256": "c48a42f1c78b182d4225643d447d68e7706729bc0909cab479e5967ab357328d",
+  "zip_sha256": "d51add3842fcfd8f4487e0038ae72616276a89d9c07663399c42eb187fa95208",
+  "checks": [
+    "all valid orders exactly once",
+    "integer piece delivery and segment lengths",
+    "steel/diameter homogeneity",
+    "bed length 50..150m",
+    "bed width <=2m",
+    "bed material <=60000kg",
+    "round limit from model",
+    "blank material accounting",
+    "all original physical cutting rounds preserved",
+    "single JSON at ZIP root",
+    "ZIP CRC"
+  ]
+}

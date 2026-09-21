@@ -1,0 +1,32 @@
+{
+  "source_orders": 5000,
+  "valid_orders": 4999,
+  "rejected": [
+    {
+      "line": 850,
+      "order_id": "A20260949",
+      "reason": "nonpositive_length",
+      "original": {
+        "订单号": "A20260949",
+        "订单重量(t)": "22.344",
+        "坯料钢种": "SALE04",
+        "订单直径(mm)": "27.80 ",
+        "订单定尺(mm)": "-1100",
+        "所有密度为9.86 g/cm^3": ""
+      }
+    }
+  ],
+  "density_kg_m3": 9860,
+  "submission_ready": false,
+  "confirmed_from_platform_feedback": [
+    "length_scheme stores net integer multiples without trim",
+    "physical round length is sum(length_scheme)+2m"
+  ],
+  "assumptions": [
+    "One shared 1 metre trim at each round end; never added to length_scheme",
+    "100 rounds algorithmic cap, not specified by supplied constraints",
+    "exact rounded-up piece demand, no additional overproduction",
+    "aggregate blank material accounting; no per-blank packing rules supplied",
+    "lexicographic objective; official baseline knife count unavailable"
+  ]
+}

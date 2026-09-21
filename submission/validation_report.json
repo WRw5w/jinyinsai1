@@ -1,0 +1,70 @@
+{
+  "package_created": true,
+  "official_acceptance_verified": false,
+  "complete_original_order_coverage": false,
+  "input_result": "D:\\02_Projects\\ML\\jinyinsai1\\runs\\half_hour_20260915_2114\\result.json",
+  "source_order_count": 5000,
+  "included_order_count": 4999,
+  "combination_coverage_over_source": 0.9996,
+  "excluded_orders": [
+    {
+      "line": 850,
+      "order_id": "A20260949",
+      "reason": "nonpositive_length",
+      "original": {
+        "订单号": "A20260949",
+        "订单重量(t)": "22.344",
+        "坯料钢种": "SALE04",
+        "订单直径(mm)": "27.80 ",
+        "订单定尺(mm)": "-1100",
+        "所有密度为9.86 g/cm^3": ""
+      }
+    }
+  ],
+  "model_assumptions": [
+    "1 metre trim per segment end, as PDF example",
+    "100 rounds algorithmic cap, not specified by supplied constraints",
+    "exact rounded-up piece demand, no additional overproduction",
+    "aggregate blank material accounting; no per-blank packing rules supplied",
+    "lexicographic objective; official baseline knife count unavailable"
+  ],
+  "before": {
+    "orders": 4999,
+    "plans": 3010,
+    "rounds": 8018,
+    "knives": 115400,
+    "finished_weight": 251117969.6886608,
+    "blank_weight": 288582726.5,
+    "yield_rate": 0.870176717554371,
+    "coverage": 0.5965193038607721,
+    "objective": "lex"
+  },
+  "after": {
+    "orders": 4999,
+    "plans": 127,
+    "rounds": 8018,
+    "knives": 115400,
+    "finished_weight": 251117969.6886597,
+    "blank_weight": 288582726.5,
+    "yield_rate": 0.8701767175543672,
+    "coverage": 0.9997999599919984,
+    "objective": "lex"
+  },
+  "json_file": "D:\\02_Projects\\ML\\jinyinsai1\\submission\\初赛结果_棒材优化.json",
+  "zip_file": "D:\\02_Projects\\ML\\jinyinsai1\\submission\\初赛结果_棒材优化.zip",
+  "json_sha256": "e5ed574396dcd93ff3e24f760e49ec5018a5d89b452c5ece7141097810ea66a9",
+  "zip_sha256": "f262e161ef8a46a31169281dfc73ccd0f9c5f64c99d5b22b8bece9ef9b9fe8e3",
+  "checks": [
+    "all valid orders exactly once",
+    "integer piece delivery and segment lengths",
+    "steel/diameter homogeneity",
+    "bed length 50..150m",
+    "bed width <=2m",
+    "bed material <=60000kg",
+    "round limit from model",
+    "blank material accounting",
+    "all original physical cutting rounds preserved",
+    "single JSON at ZIP root",
+    "ZIP CRC"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "knives": 86751,
+  "finished_weight": 253967870.06872797,
+  "blank_weight": 264712159.5,
+  "raw_weight": 264712159.5,
+  "physical_finished_weight": 256753547.0134466,
+  "coverage": 0.9993998799759952,
+  "coverage_over_source": 0.9992,
+  "coverage_percent_rounded": 99.94,
+  "source_order_count": 5000,
+  "valid_order_count": 4999,
+  "included_order_count": 4999,
+  "combination_order_count": 4996,
+  "excluded_invalid_orders": [
+    "A20260949"
+  ],
+  "plans": 210,
+  "rounds": 4799,
+  "entries": 35728,
+  "validation": "Scoring only; run platform_check separately with full raw diameters.",
+  "evidence": [
+    "diagnostics/knife_calibration.json",
+    "diagnostics/yield_semantics.json"
+  ],
+  "calibrated_observations": "Knife counts exact and displayed yields match all three official feedbacks.",
+  "assumptions": {
+    "baseline_knives": 90000,
+    "time_subscore": 100,
+    "knife_component_cap_confirmed": false,
+    "final_total_cap_confirmed": false,
+    "rounding_order_confirmed": false,
+    "note": "Feedback cannot yet distinguish the returned cap/rounding alternatives."
+  },
+  "official_yield_estimate": 0.9594114246524742,
+  "yield_rate": 0.9594114246524742,
+  "yield_percent": 95.94114246524742,
+  "yield_percent_rounded": 95.94,
+  "score_capped": 98.77034033909413,
+  "score_uncapped": 100.26842105286113,
+  "score_total_cap_only": 100.0,
+  "score_capped_display": 98.77,
+  "score_uncapped_display": 100.27,
+  "score_from_rounded_subscores_capped": 98.77,
+  "score_from_rounded_subscores_uncapped": 100.27,
+  "score_from_rounded_subscores_capped_display": 98.77,
+  "score_from_rounded_subscores_uncapped_display": 100.27,
+  "subscores": {
+    "knives": 100.0,
+    "yield_rate": 95.94114246524742,
+    "coverage": 99.93998799759952,
+    "time": 100.0
+  },
+  "subscores_uncapped": {
+    "knives": 103.74520178441747,
+    "yield_rate": 95.94114246524742,
+    "coverage": 99.93998799759952,
+    "time": 100.0
+  },
+  "rounded_subscores": {
+    "knives": 100.0,
+    "yield_rate": 95.94,
+    "coverage": 99.94,
+    "time": 100.0
+  },
+  "rounded_subscores_uncapped": {
+    "knives": 103.75,
+    "yield_rate": 95.94,
+    "coverage": 99.94,
+    "time": 100.0
+  }
+}

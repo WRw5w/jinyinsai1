@@ -1,0 +1,174 @@
+{
+  "source": "User pasted a 20-row leaderboard table in this conversation; no independent retrieval from platform",
+  "archival_date_local": "2026-09-16",
+  "timestamp_timezone": "not specified in pasted table; retained exactly as displayed",
+  "first_three_ranks": "null because source rank cells were blank; do not infer 1/2/3",
+  "rows": [
+    {
+      "rank": null,
+      "entry_id": "AIC-2026-37219102",
+      "team": "6",
+      "submitted_at_display": "2026-08-28 08:50:47",
+      "score_display": "100.0000",
+      "evaluated_at_display": "2026-08-28 08:51:04"
+    },
+    {
+      "rank": null,
+      "entry_id": "AIC-2026-85100494",
+      "team": "吴彦组",
+      "submitted_at_display": "2026-09-14 16:58:15",
+      "score_display": "100.0000",
+      "evaluated_at_display": "2026-09-14 16:58:30"
+    },
+    {
+      "rank": null,
+      "entry_id": "AIC-2026-67472960",
+      "team": "我是奶龙",
+      "submitted_at_display": "2026-08-25 22:53:59",
+      "score_display": "100.0000",
+      "evaluated_at_display": "2026-08-25 22:54:28"
+    },
+    {
+      "rank": 4,
+      "entry_id": "AIC-2026-78874705",
+      "team": "可以打一辈子竞赛吗？我什么都不会做的！",
+      "submitted_at_display": "2026-08-25 11:47:25",
+      "score_display": "100.0000",
+      "evaluated_at_display": "2026-08-25 11:47:42"
+    },
+    {
+      "rank": 5,
+      "entry_id": "AIC-2026-62805765",
+      "team": "gyfddd",
+      "submitted_at_display": "2026-08-24 19:49:17",
+      "score_display": "100.0000",
+      "evaluated_at_display": "2026-08-24 19:49:20"
+    },
+    {
+      "rank": 6,
+      "entry_id": "AIC-2026-61769633",
+      "team": "帝皇侠队",
+      "submitted_at_display": "2026-09-01 14:57:27",
+      "score_display": "100.0000",
+      "evaluated_at_display": "2026-09-01 14:57:52"
+    },
+    {
+      "rank": 7,
+      "entry_id": "AIC-2026-82755648",
+      "team": "PUBG",
+      "submitted_at_display": "2026-08-16 20:01:04",
+      "score_display": "99.5600",
+      "evaluated_at_display": "2026-08-16 20:01:17"
+    },
+    {
+      "rank": 8,
+      "entry_id": "AIC-2026-87269334",
+      "team": "冶金机械队",
+      "submitted_at_display": "2026-09-15 19:01:56",
+      "score_display": "99.4500",
+      "evaluated_at_display": "2026-09-15 19:02:30"
+    },
+    {
+      "rank": 9,
+      "entry_id": "AIC-2026-35367646",
+      "team": "钢好有解",
+      "submitted_at_display": "2026-09-12 21:27:59",
+      "score_display": "99.4500",
+      "evaluated_at_display": "2026-09-12 21:28:30"
+    },
+    {
+      "rank": 10,
+      "entry_id": "AIC-2026-98653267",
+      "team": "姜王博士",
+      "submitted_at_display": "2026-08-24 11:15:43",
+      "score_display": "99.2800",
+      "evaluated_at_display": "2026-08-24 11:15:49"
+    },
+    {
+      "rank": 11,
+      "entry_id": "AIC-2026-31726349",
+      "team": "鲤鱼小分队",
+      "submitted_at_display": "2026-09-13 23:46:42",
+      "score_display": "99.0600",
+      "evaluated_at_display": "2026-09-13 23:47:00"
+    },
+    {
+      "rank": 12,
+      "entry_id": "AIC-2026-78445472",
+      "team": "南北绿豆",
+      "submitted_at_display": "2026-09-15 11:23:10",
+      "score_display": "99.0500",
+      "evaluated_at_display": "2026-09-15 11:23:27"
+    },
+    {
+      "rank": 13,
+      "entry_id": "AIC-2026-13208788",
+      "team": "钢鉴无漏",
+      "submitted_at_display": "2026-09-16 01:24:46",
+      "score_display": "99.0200",
+      "evaluated_at_display": "2026-09-16 01:25:10"
+    },
+    {
+      "rank": 14,
+      "entry_id": "AIC-2026-89721358",
+      "team": "特种兵小队",
+      "submitted_at_display": "2026-09-06 13:53:42",
+      "score_display": "98.8600",
+      "evaluated_at_display": "2026-09-06 13:54:00"
+    },
+    {
+      "rank": 15,
+      "entry_id": "AIC-2026-77739543",
+      "team": "真的学不会",
+      "submitted_at_display": "2026-09-16 00:09:03",
+      "score_display": "98.7800",
+      "evaluated_at_display": "2026-09-16 00:09:17"
+    },
+    {
+      "rank": 16,
+      "entry_id": "AIC-2026-69548917",
+      "team": "武昌鱼队",
+      "submitted_at_display": "2026-09-10 22:13:21",
+      "score_display": "98.7100",
+      "evaluated_at_display": "2026-09-10 22:13:46"
+    },
+    {
+      "rank": 17,
+      "entry_id": "AIC-2026-74985881",
+      "team": "淡淡顺顺队",
+      "submitted_at_display": "2026-09-15 19:30:09",
+      "score_display": "98.6500",
+      "evaluated_at_display": "2026-09-15 19:30:26"
+    },
+    {
+      "rank": 18,
+      "entry_id": "AIC-2026-48851622",
+      "team": "大狗叫",
+      "submitted_at_display": "2026-08-23 19:33:25",
+      "score_display": "98.4500",
+      "evaluated_at_display": "2026-08-23 19:33:30"
+    },
+    {
+      "rank": 19,
+      "entry_id": "AIC-2026-46706374",
+      "team": "我才是校花",
+      "submitted_at_display": "2026-09-15 00:15:41",
+      "score_display": "98.4300",
+      "evaluated_at_display": "2026-09-15 00:16:08"
+    },
+    {
+      "rank": 20,
+      "entry_id": "AIC-2026-18465797",
+      "team": "这次能行",
+      "submitted_at_display": "2026-08-31 17:31:34",
+      "score_display": "98.3500",
+      "evaluated_at_display": "2026-08-31 17:31:37"
+    }
+  ],
+  "facts": {
+    "row_count": 20,
+    "displayed_100_count": 6,
+    "displayed_at_least_99_count": 13
+  },
+  "limitations": "This excerpt does not establish score-component capping, evaluator formulas, the methods used by other teams, or the fraction of all teams reaching 99."
+}

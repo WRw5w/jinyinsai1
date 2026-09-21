@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-09-15T13:58:21.968486+00:00",
+  "state": "blocked_before_upload",
+  "real_submit_calls": 0,
+  "upload_calls": 0,
+  "candidate": "D:\\02_Projects\\ML\\jinyinsai1\\submission\\初赛结果_棒材优化.zip",
+  "candidate_sha256": "f262e161ef8a46a31169281dfc73ccd0f9c5f64c99d5b22b8bece9ef9b9fe8e3",
+  "inspected_project": "D:/02_Projects/ML/jinyinsai",
+  "findings": [
+    "Existing control plane is bound to the image classification competition and pred_results.csv, not bar-cutting JSON.",
+    "Read-only browser page listing failed: ECONNREFUSED 127.0.0.1:9222.",
+    "Launching Chrome with the existing dedicated profile and remote-debugging port was rejected by automatic approval: blocked by policy."
+  ],
+  "next_required": "Logged-in bar-cutting submission page URL and an available browser connection; do not enqueue JSON in the existing image competition queue."
+}

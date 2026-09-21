@@ -1,0 +1,174 @@
+{
+  "package_created": true,
+  "official_acceptance_verified": false,
+  "complete_original_order_coverage": false,
+  "input_result": "D:\\02_Projects\\ML\\jinyinsai1\\runs\\probe\\probe_notrim.json",
+  "source_order_count": 5000,
+  "included_order_count": 4999,
+  "combination_coverage_over_source": 0.9998,
+  "excluded_orders": [
+    {
+      "line": 850,
+      "order_id": "A20260949",
+      "reason": "nonpositive_length",
+      "original": {
+        "订单号": "A20260949",
+        "订单重量(t)": "22.344",
+        "坯料钢种": "SALE04",
+        "订单直径(mm)": "27.80 ",
+        "订单定尺(mm)": "-1100",
+        "所有密度为9.86 g/cm^3": ""
+      }
+    }
+  ],
+  "model_assumptions": [
+    "One shared 1 metre trim at each round end; never added to length_scheme",
+    "100 rounds algorithmic cap, not specified by supplied constraints",
+    "exact rounded-up piece demand, no additional overproduction",
+    "aggregate blank material accounting; no per-blank packing rules supplied",
+    "lexicographic objective; official baseline knife count unavailable"
+  ],
+  "before": {
+    "orders": 4999,
+    "plans": 106,
+    "rounds": 5346,
+    "knives": 93987,
+    "finished_weight": 256676387.0407712,
+    "blank_weight": 256686859.0,
+    "yield_rate": 0.9999592033683781,
+    "coverage": 1.0,
+    "objective": "platform_score",
+    "length_mode": "net_shared_trim",
+    "platform_score_estimate": 98.301945688323
+  },
+  "after": {
+    "orders": 4999,
+    "plans": 106,
+    "rounds": 5346,
+    "knives": 93987,
+    "finished_weight": 256676387.0407717,
+    "blank_weight": 256686859.0,
+    "yield_rate": 0.9999592033683801,
+    "coverage": 1.0,
+    "objective": "platform_score",
+    "length_mode": "net_shared_trim",
+    "platform_score_estimate": 98.301945688323
+  },
+  "production": {
+    "per_order_extra_limit": 0.05,
+    "orders_with_extra_pieces": 4736,
+    "max_actual_extra_ratio": 0.050000000000000044,
+    "rounded_demand_kg": 251117969.6886611,
+    "extra_kg": 5558417.3521105945,
+    "mass_weighted_extra_ratio": 0.022134685777373875
+  },
+  "before_after_are_legacy_physical_model_not_official_score": true,
+  "calibrated_prediction": {
+    "knives": 90000,
+    "finished_weight": 253897757.3336967,
+    "blank_weight": 256686859.0,
+    "raw_weight": 256686859.0,
+    "physical_finished_weight": 256676387.04051372,
+    "coverage": 1.0,
+    "coverage_over_source": 0.9998,
+    "coverage_percent_rounded": 100.0,
+    "source_order_count": 5000,
+    "valid_order_count": 4999,
+    "included_order_count": 4999,
+    "combination_order_count": 4999,
+    "excluded_invalid_orders": [
+      "A20260949"
+    ],
+    "plans": 106,
+    "rounds": 5346,
+    "entries": 26900,
+    "validation": "Scoring only; run platform_check separately with full raw diameters.",
+    "evidence": [
+      "diagnostics/knife_calibration.json",
+      "diagnostics/yield_semantics.json"
+    ],
+    "calibrated_observations": "Knife counts exact and displayed yields match all six official feedbacks.",
+    "assumptions": {
+      "baseline_knives": 90000,
+      "time_subscore": 100,
+      "knife_component_cap_confirmed": true,
+      "final_total_cap_confirmed": false,
+      "rounding_order_confirmed": false,
+      "note": "Knife cap confirmed by the 98.93 feedback; total cap moot (ceiling is exactly 100). Displayed totals are quantised to 0.01."
+    },
+    "official_yield_estimate": 0.9891342249573309,
+    "yield_rate": 0.9891342249573309,
+    "yield_percent": 98.9134224957331,
+    "yield_percent_rounded": 98.91,
+    "score_capped": 99.67402674871992,
+    "score_uncapped": 99.67402674871992,
+    "score_total_cap_only": 99.67402674871992,
+    "score_capped_display": 99.67,
+    "score_uncapped_display": 99.67,
+    "score_from_rounded_subscores_capped": 99.673,
+    "score_from_rounded_subscores_uncapped": 99.673,
+    "score_from_rounded_subscores_capped_display": 99.67,
+    "score_from_rounded_subscores_uncapped_display": 99.67,
+    "subscores": {
+      "knives": 100.0,
+      "yield_rate": 98.9134224957331,
+      "coverage": 100.0,
+      "time": 100.0
+    },
+    "subscores_uncapped": {
+      "knives": 100.0,
+      "yield_rate": 98.9134224957331,
+      "coverage": 100.0,
+      "time": 100.0
+    },
+    "rounded_subscores": {
+      "knives": 100.0,
+      "yield_rate": 98.91,
+      "coverage": 100.0,
+      "time": 100.0
+    },
+    "rounded_subscores_uncapped": {
+      "knives": 100.0,
+      "yield_rate": 98.91,
+      "coverage": 100.0,
+      "time": 100.0
+    }
+  },
+  "independent_platform_check": {
+    "passed": true,
+    "error_counts": {},
+    "errors": {},
+    "valid_orders": 4999,
+    "excluded_invalid_orders": [
+      "A20260949"
+    ],
+    "source_orders": 5000,
+    "round_count": 5346,
+    "min_physical_length_m": 50.000000001,
+    "max_physical_length_m": 149.999999999852,
+    "max_round_weight_kg": 59999.349825986865,
+    "official_acceptance_verified": false,
+    "weight_mode": "aggregate_no_trim",
+    "declared_blank_kg": 256686859.0,
+    "required_blank_kg": 256676387.04051617,
+    "weight_check": "plan-total declared steel vs total net mass"
+  },
+  "blank_weight_mode": "aggregate_no_trim",
+  "json_file": "D:\\02_Projects\\ML\\jinyinsai1\\submission_probe_notrim\\初赛结果_棒材优化.json",
+  "zip_file": "D:\\02_Projects\\ML\\jinyinsai1\\submission_probe_notrim\\初赛结果_棒材优化.zip",
+  "json_sha256": "815b5a895b4d6ccebc11234c780e7250a647cad2719465fc06c6742e63b8c210",
+  "zip_sha256": "656373fddfc88b94cb217245d88947b7be94a7116f495ab72d84b8093be22cd8",
+  "checks": [
+    "all valid orders exactly once",
+    "integer piece delivery and segment lengths",
+    "steel/diameter homogeneity",
+    "bed length 50..150m",
+    "bed width <=2m",
+    "bed material <=60000kg",
+    "round limit from model",
+    "blank material accounting",
+    "all original physical cutting rounds preserved",
+    "single JSON at ZIP root",
+    "ZIP CRC"
+  ]
+}

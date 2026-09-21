@@ -1,0 +1,140 @@
+{
+  "status": "Four official observations reproduced. Three historical submissions matched on knife count and displayed yield; the 2026-09-16 98.6500 submission matched on total score and additionally separated the two candidate rounding orders.",
+  "source_files": [
+    "diagnostics/knife_calibration.json",
+    "diagnostics/yield_semantics.json",
+    "official_feedback_98_65.json"
+  ],
+  "verification": [
+    {
+      "source": "submission_fixed",
+      "json_sha256": "a0a165d12f977114fa7f916470f12c02dfdfb2bd7c9f1bb474bf9bd7d25542d0",
+      "official_knives": 113683,
+      "independently_recomputed_knives": 113683,
+      "official_yield_percent": 86.63,
+      "independently_recomputed_yield_percent": 86.62755434336454,
+      "displayed_yield_match": true
+    },
+    {
+      "source": "submission_optimized",
+      "json_sha256": "87d3e646ed0b81b32b2afc30b2c77aa7a22221458f9f3db9180bc7c9556251dd",
+      "official_knives": 92913,
+      "independently_recomputed_knives": 92913,
+      "official_yield_percent": 92.51,
+      "independently_recomputed_yield_percent": 92.50642475021773,
+      "displayed_yield_match": true
+    },
+    {
+      "source": "submission_normal_985",
+      "json_sha256": "5f53886795cdffd0a783f821fb306c2076031d03bf9029d720cabb7e8c4af72c",
+      "official_knives": 119268,
+      "independently_recomputed_knives": 119268,
+      "official_yield_percent": 96.71,
+      "independently_recomputed_yield_percent": 96.71444676900649,
+      "displayed_yield_match": true
+    },
+    {
+      "source": "submission_calibrated_next",
+      "json_sha256": "be6015511406302ffde762ef27d49c572090830734be25badfd70fafc4544cd1",
+      "official_knives": null,
+      "independently_recomputed_knives": 90001,
+      "official_yield_percent": null,
+      "independently_recomputed_yield_percent": 95.49596768859564,
+      "displayed_yield_match": null,
+      "official_total_score_display": "98.6500",
+      "recomputed_total_raw_weighting": 98.64834586707248,
+      "recomputed_total_from_rounded_subscores": 98.65,
+      "total_score_match": true,
+      "matched_variant": "weight_from_rounded_subscores",
+      "rejected_variant": "raw_weighting",
+      "not_reported_this_submission": [
+        "knives",
+        "yield_percent",
+        "coverage_percent",
+        "subscores"
+      ],
+      "rank_display": 19,
+      "previous_rank_display": 35
+    }
+  ],
+  "private_evaluator_source_available": false,
+  "implications": "Archive is observational calibration, not proof of all hidden evaluator rules",
+  "deprecated_bound_files": [
+    "model_bounds.json",
+    "model_bounds.md",
+    "coupled_bounds.json",
+    "coupled_bounds.md"
+  ],
+  "deprecated_bound_values": [
+    99.18197847,
+    99.0415007
+  ],
+  "deprecated_bound_reason": "Bounds apply only to the superseded per-round-extra-cut and raw-diameter score model; do not use them to bound or optimize official scores",
+  "restore_audit": "../../submission_restore_9649/restore_audit.json",
+  "display_quantisation": {
+    "identified": true,
+    "observation": "Official total read 98.6500 while raw weighting gives 98.64834586, whose four-decimal form is 98.6483; all 20 archived leaderboard scores are exact multiples of 0.01.",
+    "conclusion": "The platform quantises the displayed total to 0.01.",
+    "withdrawn_claim": "An earlier note said the fourth observation pinned down the order of rounding. It does not: rounding the raw total to two decimals also gives 98.65. The two candidate orders differ by at most 0.0035 and stay indistinguishable here.",
+    "rounding_order_confirmed": false,
+    "consequences": {
+      "free_knife_zone": "Displayed total is flat over roughly 89987-90008 cuts at the current yield; with pre-rounded subscores full knife credit survives to 90004 and 90005 is the first penalised count.",
+      "yield_step_value": "Each 0.01 step of displayed yield is worth 0.003 before the total is quantised.",
+      "score_99_threshold": "99.00 needs an actual yield of at least 96.6667 percent (displayed 96.67)."
+    }
+  },
+  "knife_cap_finding": {
+    "question": "Is the knife subscore capped at 100?",
+    "existing_feedback_is_silent": {
+      "knife_subscores": [
+        79.16751,
+        96.86481,
+        75.46031,
+        99.99889
+      ],
+      "reason": "All four are at or below 100, so the cap never binds; capped and uncapped reproductions of all four official totals are identical (87.65, 96.49, 89.19, 98.65)."
+    },
+    "resolution_by_leaderboard": {
+      "yield_hard_ceiling_percent": 98.66666666666667,
+      "yield_ceiling_source": "Platform-confirmed length contract: net multiples of order size, one shared 2 m trim per round, 150 m maximum round length, so at most 148/150 of the bar can score.",
+      "capped_model_max_total": 99.6,
+      "leaderboard_rows_at_100_0000": 6,
+      "highest_below_100": 99.56,
+      "conclusion": "With every subscore capped at 100 the total caps at about 99.60, which cannot produce a displayed 100.0000. Coverage and time cannot exceed 100 and scoring yield cannot display 100.00 either, so the knife component must be able to exceed 100. Deducting counted cuts below 90000 therefore earns credit, with the final total capped at 100.",
+      "confidence": "follows from two independently validated rules plus the archived leaderboard; the competing explanation is a degenerate low-coverage plan exploiting the same uncapped term"
+    },
+    "knife_structure": {
+      "knives": 90001,
+      "int_floor_part": 75447,
+      "segments": 14554,
+      "delivered_counted_units": 87434,
+      "float_floor_discount": 11987,
+      "identity": "knives = sum(int(L // size)) + one cut per (round, order) segment"
+    },
+    "segment_lever": {
+      "current_segments": 14554,
+      "segments_if_one_per_order": 4999,
+      "knives_if_one_segment_per_order": 89247,
+      "achievable_saving": 754,
+      "rounds_floor": 3306,
+      "segment_floor": 4999,
+      "note": "Merging gives back part of the float floor discount, so the segment lever is worth only about 754 cuts, not one cut per removed segment."
+    },
+    "thresholds_at_current_yield": {
+      "yield_percent": 95.49596768859564,
+      "knives_for_99": 89227,
+      "knives_for_100": 87069,
+      "cuts_to_remove_for_99": 774,
+      "cuts_to_remove_for_100": 2932
+    },
+    "decisive_experiment": {
+      "design": "Submit a plan holding coverage, material and yield while consolidating segments to about 89200-89300 counted cuts.",
+      "prediction_if_capped": 98.65,
+      "prediction_if_uncapped": 98.99,
+      "separation": 0.34,
+      "regression_risk": "near zero: under the capped hypothesis the prediction equals the current 98.6500 submission"
+    },
+    "report": "../../diagnostics/knife_cap_research.md",
+    "script": "../../diagnostics/knife_cap_research.py"
+  }
+}

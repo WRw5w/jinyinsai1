@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "error_counts": {},
+  "errors": {},
+  "valid_orders": 4999,
+  "excluded_invalid_orders": [
+    "A20260949"
+  ],
+  "source_orders": 5000,
+  "round_count": 4799,
+  "min_physical_length_m": 50.18799999995181,
+  "max_physical_length_m": 149.92499999985208,
+  "max_round_weight_kg": 59984.72428832021,
+  "official_acceptance_verified": false,
+  "weight_check": "conservative pi-based physical round mass including 2m shared trim"
+}

@@ -1,0 +1,225 @@
+{
+  "observed_samples": [
+    {
+      "source": "submission_fixed",
+      "official_knives": 113683,
+      "official_score": 87.65,
+      "knife_subscore_raw": 79.16751,
+      "exceeds_full_credit": false,
+      "reproduced_capped_knife": 87.65,
+      "reproduced_uncapped_knife": 87.65
+    },
+    {
+      "source": "submission_optimized",
+      "official_knives": 92913,
+      "official_score": 96.49,
+      "knife_subscore_raw": 96.86481,
+      "exceeds_full_credit": false,
+      "reproduced_capped_knife": 96.49,
+      "reproduced_uncapped_knife": 96.49
+    },
+    {
+      "source": "submission_normal_985",
+      "official_knives": 119268,
+      "official_score": 89.19,
+      "knife_subscore_raw": 75.46031,
+      "exceeds_full_credit": false,
+      "reproduced_capped_knife": 89.19,
+      "reproduced_uncapped_knife": 89.19
+    },
+    {
+      "source": "submission_calibrated_next",
+      "official_knives": 90001,
+      "official_score": 98.65,
+      "knife_subscore_raw": 99.99889,
+      "exceeds_full_credit": false,
+      "reproduced_capped_knife": 98.65,
+      "reproduced_uncapped_knife": 98.65
+    }
+  ],
+  "observed_samples_verdict": "No observation has a knife subscore above 100.00, so the cap never binds in any of them: the four feedbacks contain zero information about whether the knife component is capped, and the capped and uncapped reproductions are identical for all four. This cannot be resolved by re-reading existing evidence.",
+  "leaderboard": {
+    "rows": 20,
+    "hundred_point_0000_count": 6,
+    "highest_below_100": 99.56,
+    "next_scores": [
+      99.05,
+      99.06,
+      99.28,
+      99.45,
+      99.45,
+      99.56
+    ],
+    "all_multiples_of_0_01": true,
+    "verdict": "All 20 displayed scores are exact multiples of 0.01. Weighting 2-decimal subscores with 0.4/0.3/0.2/0.1 produces 3-decimal values (for example 99.559), so the 20/20 pattern implies the platform quantises the displayed total to 0.01. Consequence: the fourth observation (98.6500) does NOT separate the two weighting orders after all - raw weighting gives 98.64834586 which also rounds to 98.65. That earlier claim is withdrawn."
+  },
+  "yield_ceiling": {
+    "trim_per_round_m": 2.0,
+    "best_case_round_length_m": 150.0,
+    "best_case_physical_yield_percent": 98.6667,
+    "current_scoring_yield_percent": 95.495968,
+    "note": "Every round loses at least 2 m of bar to the shared head/tail trim. Scoring mass also truncates fractional diameters down to whole millimetres, so scoring yield is at or below physical yield. If the length contract is right, no plan can display a yield of 100.00."
+  },
+  "truncation_ceiling": {
+    "orders": 5000,
+    "fractional_diameter_orders": 1233,
+    "demand_weighted_factor": 0.9890942658340507,
+    "best_case_yield_percent": 98.90942658340506,
+    "generous_overproduce_ratio": 0.05,
+    "generous_factor": 0.9894678598607914,
+    "generous_best_case_yield_percent": 98.94678598607915,
+    "implication": "Scoring mass uses the diameter truncated to whole millimetres, so scoring yield is at most this factor times physical yield. Even with a perfect physical yield this caps the displayed yield below 100.00 unless an order set has no fractional diameters."
+  },
+  "capped_model_ceiling": {
+    "bound_used_displayed_yield_percent": 98.67,
+    "bound_from_trim_percent": 98.6667,
+    "bound_from_truncation_percent": 98.9094,
+    "best_total_with_knife_capped": 99.6,
+    "observed_leaderboard_100_count": 6,
+    "verdict": "With every subscore capped at 100 the total is exactly 0.4*100 + 0.3*yield + 0.2*coverage + 0.1*time, so the maximum sits near 99.60. Six leaderboard rows display 100.0000. That is not reachable unless the knife subscore can exceed 100, because yield, coverage and time all have hard ceilings below 100.",
+    "logic": "Four components and only four: the failed package displayed 75.46/96.71/99.98/100.0 and those four weight to 89.19, which pins the component list and the 40/30/20/10 weights. Coverage is a count ratio and time is fixed at 100, so neither can exceed 100. Yield cannot display 100.00 either: scoring mass truncates fractional diameters, and even with a perfect physical yield the mass-weighted truncation factor caps the displayed yield at 98.91. Therefore a displayed total of 100.0000 REQUIRES a knife subscore above 100.00, which means fewer than 90000 counted cuts must earn credit."
+  },
+  "knife_structure": {
+    "knives": 90001,
+    "segments": 14554,
+    "rounds": 5470,
+    "pieces": 87434,
+    "int_floor_part": 75447,
+    "segment_overhead": 14554,
+    "float_floor_gap": -11987,
+    "identity": "knives = sum(int(L // size)) + one cut per (round, order) segment",
+    "pieces_identity": "sum(int(L // size)) equals pieces delivered minus a float rounding gap",
+    "orders": 4999,
+    "segments_per_order_histogram": {
+      "4": 514,
+      "6": 196,
+      "2": 1502,
+      "5": 343,
+      "3": 896,
+      "8": 87,
+      "7": 106,
+      "9": 41,
+      "1": 1235,
+      "12": 10,
+      "10": 34,
+      "11": 26,
+      "13": 3,
+      "17": 1,
+      "14": 4,
+      "15": 1
+    },
+    "segments_per_round_histogram": {
+      "3": 1733,
+      "2": 1667,
+      "4": 863,
+      "1": 886,
+      "5": 251,
+      "6": 63,
+      "8": 1,
+      "7": 6
+    },
+    "segments_if_one_per_order": 4999,
+    "knives_if_one_segment_per_order": 80446,
+    "conclusion": "Almost all knife cost is the piece count, which demand fixes. The only lever is the segment count: each (round, order) pair costs one extra cut. The current plan runs 2.66 segments per round, which is what a search with no knife gradient produces."
+  },
+  "segment_lever": {
+    "current_knives": 90001,
+    "current_segments": 14554,
+    "orders": 4999,
+    "merged_one_segment_per_order_knives": 89247,
+    "merged_one_segment_per_order_segments": 4999,
+    "achievable_saving": 754,
+    "orders_that_gain_from_merging": 863,
+    "float_floor_discount": 11987,
+    "float_floor_discount_note": "The counted cuts sit BELOW the delivered piece count because of the observed floating // behaviour: sum(int(L // size)) is smaller than the number of pieces. Merging segments gives back the one-cut-per-segment overhead but at the same time gives back part of this floor discount, so the net saving is far smaller than the segment count.",
+    "capacity_min_segments": 4999,
+    "rounds_floor": 3306,
+    "capacity_note": "The bed-length contract alone needs at least 3306 rounds, and every order needs at least one segment, so no plan can go below 4999 segments. The one-segment-per-order merge above is therefore unreachable and 754 cuts is an optimistic ceiling on this lever, not a target.",
+    "verdict": "Merging every order into a single segment is the best case the structure allows and it is worth about 754 counted cuts, taking the total from 90001 to 89247. Compare that with the 774 cuts needed for 99.00 and the 2932 needed for 100.00 at the current yield."
+  },
+  "score_vs_knives": [
+    {
+      "knives": 90001,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 98.65
+    },
+    {
+      "knives": 90008,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 98.65
+    },
+    {
+      "knives": 90000,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 98.65
+    },
+    {
+      "knives": 89500,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 98.87
+    },
+    {
+      "knives": 89219,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 99.0
+    },
+    {
+      "knives": 89000,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 99.1
+    },
+    {
+      "knives": 88000,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 99.56
+    },
+    {
+      "knives": 87062,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 100.0
+    },
+    {
+      "knives": 85000,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 100.0
+    },
+    {
+      "knives": 80000,
+      "capped_knife_pre_round": 98.65,
+      "capped_knife_plain": 98.65,
+      "uncapped_knife_plain": 100.0
+    }
+  ],
+  "knife_thresholds_at_current_yield": {
+    "yield_percent": 95.495968,
+    "current_knives": 90001,
+    "needed_knives": {
+      "99.00_capped": null,
+      "99.00_uncapped": 89227,
+      "100.00_uncapped": 87069
+    },
+    "segments_to_remove": {
+      "99.00_uncapped": 774,
+      "100.00_uncapped": 2932
+    },
+    "note": "Under the capped hypothesis no knife reduction helps at all: full credit is already rounded in. Under the uncapped hypothesis each removed segment is worth about 0.44 points at the current knife level, which is a far steeper lever than yield."
+  },
+  "decisive_experiment": {
+    "design": "Submit a plan that keeps full coverage and the same delivered material but consolidates rounds so the segment count drops. Holding yield near 95.50 and cutting knives from 90001 to about 89000 separates the hypotheses cleanly.",
+    "prediction_if_knife_capped": 98.65,
+    "prediction_if_knife_uncapped": 99.1,
+    "separation_points": 0.45,
+    "regression_risk": "Low: holding material and yield fixed, the capped hypothesis predicts the same score as the current 98.6500 submission, so the worst case is no change.",
+    "segments_needed": 1001,
+    "verdict": "A knife reduction of 1001 is enough for a decisive reading. If the official score stays at the capped prediction the cap is real and yield remains the only lever; if it rises towards the uncapped prediction, knife count becomes the primary objective and the 99 and 100 targets move from \"raise yield by 1.17 points\" to \"consolidate segments\"."
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "source": "User-provided leaderboard row in this conversation",
+  "raw_leaderboard_row": "19 | AIC-2026-93096493 | 鱼不吃猫 | 2026-09-16 10:38:45 | 98.6500 | 2026-09-16 10:38:54",
+  "raw_result_text": null,
+  "feasible": true,
+  "total_score_display": "98.6500",
+  "rank_display": 19,
+  "previous_rank_display": 35,
+  "competition_id": "AIC-2026-93096493",
+  "team": "鱼不吃猫",
+  "submitted_at_display": "2026-09-16 10:38:45",
+  "evaluated_at_display": "2026-09-16 10:38:54",
+  "display_timezone": "Asia/Shanghai",
+  "knives": null,
+  "yield_percent": null,
+  "coverage_percent": null,
+  "subscores": null,
+  "not_reported_this_submission": [
+    "锯切刀数",
+    "成材率",
+    "覆盖率",
+    "子分(刀/材/覆/时)"
+  ],
+  "source_folder": "submission_calibrated_next",
+  "json_sha256": "be6015511406302ffde762ef27d49c572090830734be25badfd70fafc4544cd1",
+  "zip_sha256": "355e616581119006ce2ee53ec1178ad854f1d5164d9c346791f51c2bf817c164",
+  "source_result_sha256": "3cc71137f671bb6c4be014e4db5936fe40589788cea1ea83c9366278378e40fd",
+  "association_provenance": "User-provided leaderboard row immediately following the submission_calibrated_next package in this conversation; local file hashes verified. The association is conversational, not a server-side submission receipt.",
+  "server_submission_receipt_available": false,
+  "local_prediction": {
+    "knives": 90001,
+    "yield_percent": 95.49596768859564,
+    "coverage_percent": 100.0,
+    "rounded_subscores": {
+      "knives": 100.0,
+      "material": 95.5,
+      "coverage": 100.0,
+      "time": 100.0
+    },
+    "raw_weighted_total": 98.64834586707248,
+    "weight_from_rounded_subscores_total": 98.65,
+    "display_4dp_raw": "98.6483",
+    "display_4dp_from_rounded_subscores": "98.6500"
+  },
+  "local_prediction_status": "calibrated_match_on_total_score",
+  "match": {
+    "total_score": true,
+    "knives": "unknown_this_submission",
+    "yield_percent": "unknown_this_submission",
+    "coverage_percent": "unknown_this_submission",
+    "matched_variant": "weight_from_rounded_subscores_capped",
+    "rejected_variant": "raw_weighted_total",
+    "rejected_variant_display_4dp": "98.6483"
+  },
+  "official_minus_local_total_score": 0.00165413292752,
+  "regression_vs_best_user_reported_official": {
+    "previous_best_score": 96.49,
+    "score_difference": 2.16
+  },
+  "rounding_order_finding": {
+    "statement": "First observation with 4-decimal display; it separates the two rounding orders that were indistinguishable while only 2 decimals were shown.",
+    "conclusion": "Official total equals the weighting of subscores already rounded to 2 decimals (40 + 28.65 + 20 + 10 = 98.65), not the weighting of unrounded subscores (98.6483).",
+    "confidence": "single observation; consistent with all three earlier 2-decimal observations, but n=1 for the discrimination itself",
+    "consequence_objective_is_quantized": true,
+    "free_knife_budget": {
+      "rule": "knife_subscore = 100 * 90000 / knives is rounded to 2 decimals before weighting",
+      "free_until_knives": 90004,
+      "first_penalised_knives": 90005,
+      "knife_subscore_at_90005": 99.994447,
+      "note": "Knife counts up to 90004 cost nothing; the previous assumed hard limit of 90000 was too tight by 4 knives."
+    },
+    "yield_step_value": {
+      "step_percent": 0.01,
+      "score_value": 0.003,
+      "note": "Only crossing a 0.01 step in displayed yield moves the score; micro-improvements inside a step are worth zero."
+    },
+    "score_99_threshold": {
+      "formula": "40 + 0.3 * rounded_yield + 20 + 10 >= 99",
+      "required_rounded_yield_percent": 96.67,
+      "required_actual_yield_percent_at_least": 96.665,
+      "safe_target_actual_yield_percent": 96.67,
+      "safe_target_reason": "96.665 sits exactly on the half-way rounding boundary; target 96.67 to stay clear of any half-even behaviour in the private code.",
+      "current_yield_percent": 95.495968,
+      "shortfall_percentage_points": 1.169
+    }
+  },
+  "archived_at_utc": "2026-09-16T02:42:21+00:00"
+}

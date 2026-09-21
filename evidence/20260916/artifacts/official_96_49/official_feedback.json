@@ -1,0 +1,17 @@
+{
+  "source": "user platform feedback 2026-09-16",
+  "feasible": true,
+  "total_score": 96.49,
+  "rank": 28,
+  "knives": 92913,
+  "yield_rate": 0.9251,
+  "coverage": 0.9998,
+  "subscores": {
+    "knives": 96.86,
+    "material": 92.51,
+    "coverage": 99.98,
+    "time": 100
+  },
+  "json_sha256": "87d3e646ed0b81b32b2afc30b2c77aa7a22221458f9f3db9180bc7c9556251dd",
+  "package": "submission_optimized\\初赛结果_棒材优化.zip"
+}

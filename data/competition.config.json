@@ -1,0 +1,13 @@
+{
+  "bed_length": 150,
+  "min_bed_length": 50,
+  "bed_width": 1000,
+  "bed_width_mm": 2000,
+  "bed_weight": 60000,
+  "trim": 1,
+  "max_rounds": 100,
+  "max_overproduction_ratio": 0,
+  "objective": "lex",
+  "search_max_group": 8,
+  "length_mode": "net_shared_trim"
+}

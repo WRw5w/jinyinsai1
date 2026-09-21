@@ -1,0 +1,13 @@
+{
+  "orders": 4,
+  "plans": 2,
+  "rounds": 3,
+  "knives": 8,
+  "finished_weight": 54.74853517410932,
+  "blank_weight": 781.2763938359385,
+  "yield_rate": 0.07007575757575757,
+  "coverage": 0.75,
+  "objective": "lex",
+  "elapsed_seconds": 0.0031797999999980675,
+  "optimality": "proven_in_configured_model"
+}

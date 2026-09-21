@@ -1,0 +1,218 @@
+{
+  "user_instruction_raw": "ok,先将这组数据给存储起来,然后先达到正常能到的上限99,再检查有没有hack的办法可到100",
+  "sequence": [
+    {
+      "phase": 1,
+      "name": "Archive provided evidence",
+      "status": "complete",
+      "artifacts": [
+        "leaderboard_top20.json",
+        "leaderboard_top20.md",
+        "submission_evidence.json",
+        "artifacts/"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Optimize valid physical cutting plans toward official score >=99",
+      "status": "calibrated_candidate_ready_handoff_requested",
+      "success_requires": "Official feedback for the exact submitted JSON hash; local estimate alone is not achievement",
+      "intermediate_target": "Local estimate >=98.5 with complete physical feasibility; official result remains distinct",
+      "intermediate_target_status": "New calibrated prediction98.60731649; physical and independent checks passed; official feedback pending"
+    },
+    {
+      "phase": 3,
+      "name": "Inspect scoring boundaries / potential route to 100",
+      "status": "paused_until_model_calibrated_and_phase_2_verified",
+      "scope_note": "The user's later request remains pending; scoreboard does not establish any evaluator weakness."
+    }
+  ],
+  "current_verified_official_best": {
+    "score": 96.49,
+    "json_sha256": "87d3e646ed0b81b32b2afc30b2c77aa7a22221458f9f3db9180bc7c9556251dd",
+    "verification_source": "user-reported platform feedback"
+  },
+  "latest_unverified_local_candidate": {
+    "estimated_score": 98.60731649494954,
+    "knives": 90000,
+    "yield_rate": 0.9537105765036527,
+    "coverage": 0.9997999599919984,
+    "source": "runs/calibrated_heterogeneous/result.json",
+    "package": "submission_calibrated/初赛结果_棒材优化.zip",
+    "json_sha256": "1d47a40f6f04520b6fcf9d0bd4a65fb6606a458da773244c1d161e396a0f54a3",
+    "official_feedback_received": false,
+    "validation": "5 score regression tests and submission builder physical, independent and ZIP checks passed"
+  },
+  "hypotheses_not_confirmed": [
+    "Knife score baseline is 90000, inferred from feedback.",
+    "Current local score assumes weights 40/30/20/10, individual knife component capped at100, and time component100; not evaluator equivalence.",
+    "Alternative: knife component is not capped, but final total is capped at100. Leaderboard alone does not prove this.",
+    "148/150 material upper bound and total99.6 follow only under the stated local physical and capped-score assumptions; neither is an established official bound.",
+    "Maximum100 rounds and per-order5% surplus are algorithm choices, not verified official upper constraints."
+  ],
+  "known_limits": [
+    "4999 valid input orders; invalid source order A20260949 has -1100mm size and remains excluded, not silently repaired.",
+    "Local and official knife/material metrics differ; do not treat local>=99 as official>=99.",
+    "At archival time there is no official feedback for the92043-knife candidate.",
+    "Third user-reported official evaluation: local91596 knives versus official119268. Earlier local score improvements are not reliable official progress."
+  ],
+  "latest_user_steering": "可行; 锯切刀数=119268, 成材率=96.71%, 覆盖率=99.98%, 子分(刀/材/覆/时)=75.46/96.71/99.98/100.0; leaderboard score89.1900 rank35",
+  "active_local_milestone": 98.5,
+  "local_985_milestone": {
+    "achieved": true,
+    "metrics": {
+      "orders": 4999,
+      "plans": 103,
+      "rounds": 4878,
+      "knives": 91596,
+      "finished_weight": 255143752.75155225,
+      "blank_weight": 260940956.0,
+      "yield_rate": 0.9777834674275979,
+      "coverage": 0.9997999599919984,
+      "objective": "platform_score",
+      "length_mode": "net_shared_trim",
+      "platform_score_estimate": 98.632529555708
+    },
+    "json_sha256": "5f53886795cdffd0a783f821fb306c2076031d03bf9029d720cabb7e8c4af72c",
+    "package": "D:\\02_Projects\\ML\\jinyinsai1\\submission_normal_985\\初赛结果_棒材优化.zip",
+    "independent_validation_passed": true,
+    "official_acceptance_verified": true,
+    "official_verification_source": "user report with conversational file association, no server receipt",
+    "official_score": 89.19,
+    "prediction_validity": "invalid_for_official_improvement_claims"
+  },
+  "normal_99_search": {
+    "state": "completed_candidate_official89_19_model_mismatch",
+    "local_99_reached": false,
+    "best_local_score": 98.632529555708,
+    "watcher_receipt": "runs/normal_target_99_watch/task_status.json",
+    "result": "runs/normal_final/result.json",
+    "official_feedback_required": false,
+    "official_99_reached": false,
+    "calibration_required": true
+  },
+  "latest_official_feedback": {
+    "source": "User-provided platform result text and leaderboard table in this conversation",
+    "raw_result_text": "可行; 锯切刀数=119268, 成材率=96.71%, 覆盖率=99.98%, 子分(刀/材/覆/时)=75.46/96.71/99.98/100.0",
+    "raw_leaderboard_row": "| 35 | AIC-2026-93096493 | 鱼不吃猫 | 2026-09-16 10:02:46 | 89.1900 | 2026-09-16 10:02:54 |",
+    "feasible": true,
+    "total_score_display": "89.1900",
+    "rank_display": 35,
+    "competition_id": "AIC-2026-93096493",
+    "team": "鱼不吃猫",
+    "submitted_at_display": "2026-09-16 10:02:46",
+    "evaluated_at_display": "2026-09-16 10:02:54",
+    "display_timezone": "Asia/Shanghai",
+    "knives": 119268,
+    "yield_percent": 96.71,
+    "coverage_percent": 99.98,
+    "subscores": {
+      "knives": 75.46,
+      "material": 96.71,
+      "coverage": 99.98,
+      "time": 100.0
+    },
+    "source_folder": "submission_normal_985",
+    "json_sha256": "5f53886795cdffd0a783f821fb306c2076031d03bf9029d720cabb7e8c4af72c",
+    "zip_sha256": "b1ac859c49a7ca227f9ec02ca5d09bf22daaee96d898ae4577e2e7814d1cfaf4",
+    "association_provenance": "User-provided feedback immediately following the submission_normal_985 package in this conversation; local file hashes verified. The association is conversational, not a server-side submission receipt.",
+    "server_submission_receipt_available": false,
+    "local_metrics_at_submission": {
+      "orders": 4999,
+      "plans": 103,
+      "rounds": 4878,
+      "knives": 91596,
+      "finished_weight": 255143752.75155225,
+      "blank_weight": 260940956.0,
+      "yield_rate": 0.9777834674275979,
+      "coverage": 0.9997999599919984,
+      "objective": "platform_score",
+      "length_mode": "net_shared_trim",
+      "platform_score_estimate": 98.632529555708
+    },
+    "local_prediction_status": "severely_miscalibrated_do_not_use_for_official_score_claims",
+    "regression_vs_best_user_reported_official": {
+      "previous_best_score": 96.49,
+      "score_difference": -7.3
+    },
+    "official_minus_local_knives": 27672,
+    "diagnosis_status": "Knife-count discrepancy established; root cause not yet established by this archive",
+    "archived_at_utc": "2026-09-16T10:07:38.014189+08:00"
+  },
+  "current_action": "User requested low-budget handoff; read HANDOFF.md. No new search started for handoff. v2 engine compiled but not run.",
+  "calibration_review": {
+    "status": "All three historical knife counts and displayed material yields independently reproduced",
+    "source_files": [
+      "diagnostics/knife_calibration.json",
+      "diagnostics/yield_semantics.json"
+    ],
+    "verification": [
+      {
+        "source": "submission_fixed",
+        "json_sha256": "a0a165d12f977114fa7f916470f12c02dfdfb2bd7c9f1bb474bf9bd7d25542d0",
+        "official_knives": 113683,
+        "independently_recomputed_knives": 113683,
+        "official_yield_percent": 86.63,
+        "independently_recomputed_yield_percent": 86.62755434336454,
+        "displayed_yield_match": true
+      },
+      {
+        "source": "submission_optimized",
+        "json_sha256": "87d3e646ed0b81b32b2afc30b2c77aa7a22221458f9f3db9180bc7c9556251dd",
+        "official_knives": 92913,
+        "independently_recomputed_knives": 92913,
+        "official_yield_percent": 92.51,
+        "independently_recomputed_yield_percent": 92.50642475021773,
+        "displayed_yield_match": true
+      },
+      {
+        "source": "submission_normal_985",
+        "json_sha256": "5f53886795cdffd0a783f821fb306c2076031d03bf9029d720cabb7e8c4af72c",
+        "official_knives": 119268,
+        "independently_recomputed_knives": 119268,
+        "official_yield_percent": 96.71,
+        "independently_recomputed_yield_percent": 96.71444676900649,
+        "displayed_yield_match": true
+      }
+    ],
+    "private_evaluator_source_available": false,
+    "implications": "Archive is observational calibration, not proof of all hidden evaluator rules",
+    "deprecated_bound_files": [
+      "model_bounds.json",
+      "model_bounds.md",
+      "coupled_bounds.json",
+      "coupled_bounds.md"
+    ],
+    "deprecated_bound_values": [
+      99.18197847,
+      99.0415007
+    ],
+    "deprecated_bound_reason": "Bounds apply only to the superseded per-round-extra-cut and raw-diameter score model; do not use them to bound or optimize official scores",
+    "restore_audit": "../../submission_restore_9649/restore_audit.json"
+  },
+  "deprecated_model_bounds": [
+    "model_bounds.json",
+    "model_bounds.md",
+    "coupled_bounds.json",
+    "coupled_bounds.md"
+  ],
+  "bound_usage_policy": "Do not apply historical99.18198/99.04150 local bounds or their necessary conditions to the official evaluator",
+  "restoration_package": {
+    "restored_at_utc": "2026-09-16T10:12:19.245782+08:00",
+    "source_folder": "submission_optimized",
+    "archive_folder": "evidence/20260916/artifacts/official_96_49",
+    "output_folder": "submission_restore_9649",
+    "json_sha256": "87d3e646ed0b81b32b2afc30b2c77aa7a22221458f9f3db9180bc7c9556251dd",
+    "zip_sha256": "2aa15639806d1d07590c5632ed01e5def764dce86ef222d67d85ae2d9e8ab448",
+    "archive_byte_identity": true,
+    "zip_crc_passed": true,
+    "zip_single_root_json": true,
+    "zip_json_byte_identity": true,
+    "official_score": 96.49,
+    "official_knives": 92913,
+    "official_yield_percent": 92.51,
+    "feedback_source": "Historical user-reported feedback for the conversation-associated file; no server-side receipt",
+    "newly_submitted": false
+  },
+  "handoff_document": "../../HANDOFF.md"
+}

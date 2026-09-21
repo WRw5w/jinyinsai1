@@ -1,0 +1,39 @@
+{
+  "round": "semi",
+  "source_orders": 10000,
+  "valid_orders": 9999,
+  "rejected": [
+    {
+      "line": 282,
+      "order_id": "B20270281",
+      "reason": "nonpositive_weight",
+      "original": {
+        "订单号": "B20270281",
+        "订单重量": "-25.418",
+        "钢种": "NP01",
+        "规格": "43",
+        "定尺长度": "6100"
+      }
+    }
+  ],
+  "density_kg_m3": 9860,
+  "encodings": {
+    "orders": "gbk",
+    "blanks": "gbk"
+  },
+  "submission_ready": false,
+  "confirmed_from_rules": [
+    "round cap 6 (constraints.txt clause 4)",
+    "homogeneity is steel + spec/diameter (constraints.txt clause 5)",
+    "adjacent-round continuity required (constraints.txt clause 6)",
+    "per-round blank mass >= per-round bar mass (clause 7)",
+    "per-order allocated mass >= order weight (clause 8)",
+    "knives per round = segments + 1 (PDF 六(一), 50m/3m -> 17)"
+  ],
+  "assumptions": [
+    "one shared 1 m trim at each round end; never written into length_scheme",
+    "coverage counts orders sharing a single cold-bed round",
+    "weight 40/30/20/10 with an independent time subscore (PDF 九); RULES.md records a conflicting Q&A claim that time is folded into yield",
+    "knife baseline for the semi-final round is unknown; left unset"
+  ]
+}
