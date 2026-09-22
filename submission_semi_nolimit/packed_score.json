@@ -1,0 +1,104 @@
+{
+  "round": "semi",
+  "rules": {
+    "knife_add_per": "round",
+    "coverage_shared": true,
+    "max_rounds": 6,
+    "continuity": true,
+    "weights": [
+      0.4,
+      0.3,
+      0.2,
+      0.1
+    ],
+    "baseline_knives": 160000.0,
+    "time_subscore": 100.0
+  },
+  "knives": 185648,
+  "finished_weight": 500935598.5766823,
+  "blank_weight": 549999419.611994,
+  "raw_weight": 549999419.611994,
+  "physical_finished_weight": 518916838.3067067,
+  "coverage": 1.0,
+  "coverage_over_source": 0.9999,
+  "coverage_percent_rounded": 100.0,
+  "source_order_count": 10000,
+  "valid_order_count": 9999,
+  "included_order_count": 9999,
+  "combination_order_count": 9999,
+  "excluded_invalid_orders": [
+    "B20270281"
+  ],
+  "plans": 1941,
+  "rounds": 11089,
+  "entries": 29981,
+  "violations": {},
+  "violation_count": 0,
+  "violation_detail": [],
+  "penalty_points": 0.0,
+  "validation": "Scoring only; run platform_check separately with full raw diameters.",
+  "evidence": [
+    "diagnostics/knife_calibration.json",
+    "diagnostics/yield_semantics.json"
+  ],
+  "calibrated_observations": "Preliminary knife counts are exact and displayed yields match all seven official feedbacks. Semi-final knives and coverage follow constraints.txt and PDF 六/九 and are unverified against any official feedback, because none exists yet.",
+  "assumptions": {
+    "baseline_knives": 160000.0,
+    "time_subscore": 100.0,
+    "weights": [
+      0.4,
+      0.3,
+      0.2,
+      0.1
+    ],
+    "knife_component_cap_confirmed": true,
+    "final_total_cap_confirmed": false,
+    "rounding_order_confirmed": false,
+    "note": "Knife cap confirmed by the 98.93 feedback; total cap moot (ceiling is exactly 100). Displayed totals are quantised to 0.01."
+  },
+  "official_yield_estimate": 0.9107929585272571,
+  "yield_rate": 0.9107929585272571,
+  "yield_percent": 91.0792958527257,
+  "yield_percent_rounded": 91.08,
+  "score_capped": 91.79763172746297,
+  "score_uncapped": 91.79763172746297,
+  "score_total_cap_only": 91.79763172746297,
+  "score_capped_display": 91.8,
+  "score_uncapped_display": 91.8,
+  "score_from_rounded_subscores_capped": 91.79599999999999,
+  "score_from_rounded_subscores_uncapped": 91.79599999999999,
+  "score_from_rounded_subscores_capped_display": 91.8,
+  "score_from_rounded_subscores_uncapped_display": 91.8,
+  "subscores": {
+    "knives": 86.18460742911316,
+    "yield_rate": 91.0792958527257,
+    "coverage": 100.0,
+    "time": 100.0
+  },
+  "subscores_uncapped": {
+    "knives": 86.18460742911316,
+    "yield_rate": 91.0792958527257,
+    "coverage": 100.0,
+    "time": 100.0
+  },
+  "rounded_subscores": {
+    "knives": 86.18,
+    "yield_rate": 91.08,
+    "coverage": 100.0,
+    "time": 100.0
+  },
+  "rounded_subscores_uncapped": {
+    "knives": 86.18,
+    "yield_rate": 91.08,
+    "coverage": 100.0,
+    "time": 100.0
+  },
+  "score_capped_after_penalty": 91.79763172746297,
+  "score_uncapped_after_penalty": 91.79763172746297,
+  "score_from_rounded_subscores_capped_after_penalty": 91.79599999999999,
+  "score_from_rounded_subscores_uncapped_after_penalty": 91.79599999999999,
+  "score_capped_display_after_penalty": 91.8,
+  "score_uncapped_display_after_penalty": 91.8,
+  "score_from_rounded_subscores_capped_display_after_penalty": 91.8,
+  "score_from_rounded_subscores_uncapped_display_after_penalty": 91.8
+}
