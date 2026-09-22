@@ -741,11 +741,13 @@ def _max_delivery_table(model, ids, order):
 def _min_rounds_for(model, ids, order, left, budget, table=None):
     """Fewest rounds that can consume exactly `left` pieces of one order.
 
-    A round hands an order `k * parallel` pieces, and the platform forbids
-    over-production above the rounded-up demand, so the pieces must be consumed
-    exactly.  For a fixed `parallel = p` a round carries at most `table[p]`
-    pieces, so the order needs `ceil(left / table[p])` rounds and the answer is the
-    best over `p`.
+    A round hands an order `k * parallel` pieces, and the yield numerator credits
+    at most the order's demand, so the solver aims to consume the pieces exactly --
+    an overshooting plan is legal (constraints.txt clause 8 is a one-sided floor,
+    RULES.md 12.5 penalises short delivery only) but the excess is uncredited and
+    costs billet weight.  For a fixed `parallel = p` a round carries at most
+    `table[p]` pieces, so the order needs `ceil(left / table[p])` rounds and the
+    answer is the best over `p`.
 
     Returns `None` when no parallel count can consume the remainder inside the
     rounds left.  `table` is the precomputed `_max_delivery_table`; callers that
@@ -903,14 +905,17 @@ def _construct(model, ids, rng, deadline, randomized=False):
                         # never below one segment.
                         k = min(k, max(1, _ceil(remaining[j] / parallel / rounds_left)))
                     elif rounds_left == 1:
-                        # This is the last round, so it has to deliver *exactly*
-                        # what is owed: no round is left to absorb a remainder and
-                        # over-production is forbidden.  That forces `parallel` to
-                        # divide the order's remainder (`k = left / p`).  When it
-                        # does not, this parallel count cannot finish the order and
-                        # the whole candidate is abandoned -- patching `k` down to
-                        # `left // p` only strands the difference forever, which is
-                        # how the 946/1156 pair used to end on 2 leftover pieces.
+                        # This is the last round, so aim to deliver exactly what is
+                        # owed: no round is left to absorb a remainder, and the yield
+                        # numerator credits at most the demand, so over-production
+                        # here is pure waste.  That forces `parallel` to divide the
+                        # order's remainder (`k = left / p`).  When it does not, this
+                        # parallel count cannot finish the order cleanly and the whole
+                        # candidate is abandoned -- patching `k` down to `left // p`
+                        # only strands the difference forever, which is how the
+                        # 946/1156 pair used to end on 2 leftover pieces.  (Abandoning
+                        # is safe: the leftovers reach `_solo_scheme`, which may spend
+                        # the cap where exactness is impossible.)
                         if remaining[j] % parallel:
                             final_round_ok = False
                             break
@@ -1443,9 +1448,12 @@ def _pack_group(model, group, singles, construct, rng, deadline, cfg):
 
     * `max_rounds` is a per-scheme budget, not a per-order one, so a heavy order
       can consume all six rounds alone; and
-    * any order whose delivery is not exact is rejected (`max_overproduction_ratio
-      = 0`), so a shared scheme must close *every* member exactly inside the same
-      six rounds.
+    * a shared scheme must close *every* member inside the same six rounds and land
+      each one inside the over-production cap (`max_overproduction_ratio`, 2% for
+      the semi-final).  The packing still TARGETS exact delivery -- the excess is
+      uncredited by the yield numerator and costs billet weight in the denominator
+      -- but exactness is no longer a validity requirement: constraints.txt clause 8
+      is a one-sided floor and RULES.md 12.5 penalises only short delivery.
 
     The strategy is neighbour-first and width-limited: try to merge the current
     order with the next `w-1` orders, and on failure bisect the window down to a
@@ -1661,60 +1669,99 @@ def _solo_scheme(model, ids, blank, rng, deadline, randomized=False):
     right for a shared scheme (continuity forces every order into every round) but
     wrong for a solo order: the spread can overshoot the 6-round budget or leave a
     tail that no 50 m round can absorb.  Here the round count is chosen first, then
-    the pieces are divided to fit it exactly.
+    the pieces are divided to fit it.
 
-    For a fixed round count `n` the decomposition is found by long division: pick
-    a parallel count `p`, put `k = pieces // (n*p)` segments in each of the first
-    `n-1` rounds and the remainder in the last, then verify every round is a legal
-    50-150 m, <=60 t round.  This is O(n * parallel_limit) instead of a retry loop.
+    The legal shapes are enumerated analytically.  A round's segment count `k` is
+    legal exactly when
+
+        min_bed_length <= k * size + segment_trim + round_trim <= min(bed_length, usable)
+
+    and the round's mass `(k * size + segment_trim + round_trim) * parallel * linear`
+    stays inside the 60 t ceiling, so for a fixed `parallel` the legal `k` are a
+    contiguous range `[k_lo, k_hi]`.  Over `n` rounds the fewest segments that can
+    carry the demand is therefore
+
+        total_k = max(n * k_lo, ceil(pieces / parallel))
+
+    any value up to `n * k_hi` that the over-production cap admits is walkable
+    (a contiguous range sums to every value in between), and even division of
+    `total_k` over `n` rounds keeps every `k` inside `[k_lo, k_hi]`.  So this is
+    O(n * parallel_limit) arithmetic, then one `make_round` per round to build it.
+
+    The equality that used to be here -- `total_k * parallel == pieces`, i.e.
+    `parallel` must divide the demand -- is gone, and it was the wrong constraint.
+    It left 3,304 of the 9,999 semi-final orders with NO legal scheme at all
+    (measured with `diagnostics/semi_overproduction_probe.py`): the demand is often
+    prime, and `parallel = 1`
+    cannot reach the 50 m floor for a heavy order, so no `(n, p)` landed them.
+    `_solo_scheme` returned None, `_seed_group` raised `ModelError`, and the whole
+    chunk was lost.  The equality had been added to stop over-delivery, but that
+    premise is wrong for the semi-final: constraints.txt clause 8 is a one-sided
+    floor ("每订单冷床分配总重量须不低于该订单重量") and RULES.md 12.5 penalises SHORT
+    delivery only -- over-production is uncredited, not forbidden (see
+    `platform_score.Rules.numerator_capped_by_demand`).  `model.caps` is the real
+    ceiling, and inside it the search now minimises the excess instead of refusing.
+
+    Ranking: `total_k + n` is the scheme's knife count (`sum(ks) + 1` per round), and
+    `parallel * total_k` is the over-delivery the yield numerator will not credit, so
+    candidates are ordered by `(total_k + n, parallel * total_k)`.  Fewer rounds wins
+    first, which is also why `n` is swept ascending: a small `n` needs fewer segments
+    overall, so it improves both terms at once.
     """
     cfg = model.cfg
     order = model.orders[ids[0]]
     limit = model.parallel_limit(ids)
+    size, linear = order.size, order.linear_weight
+    tr = cfg.segment_trim + cfg.round_trim
+    cap = model.caps[ids[0]]
 
-    def try_shape(n):
+    k_lo = max(1, _ceil((cfg.min_bed_length - tr) / size))
+    len_hi = min(cfg.bed_length, model.blank_length(ids, blank))
+
+    def k_hi_for(parallel):
+        k_hi = _floor((len_hi - tr) / size)
+        if parallel * linear > 0:
+            k_hi = min(k_hi, _floor((cfg.bed_weight / (parallel * linear) - tr) / size))
+        return k_hi
+
+    def build(parallel, total_k, n):
+        per, extra = divmod(total_k, n)
+        if per < 1:
+            return None
+        ks = [per + 1] * extra + [per] * (n - extra)
+        rounds = []
+        for k in ks:
+            r = model.make_round(ids, [k], parallel, blank)
+            if r is None:
+                return None
+            rounds.append(r)
+        return Batch(ids, blank.bid, tuple(rounds))
+
+    for n in range(1, min(cfg.max_rounds, order.pieces) + 1):
+        _deadline(deadline)
+        candidates = []
         for parallel in range(1, limit + 1):
             _deadline(deadline)
-            # Delivered pieces must equal the demand EXACTLY.  `total_k` is
-            # `ceil(pieces / parallel)`, which is the smallest segment count whose
-            # product reaches the demand, so `total_k * parallel == pieces` only
-            # when `parallel` divides the demand.  Testing for `<` (the original
-            # code) accepted the over-delivering case as well and produced plans the
-            # platform rejects: measured on `NP01:43`'s order B20270141 (447 pieces,
-            # 4.9 m), `parallel=5` gives `ceil(447/5) = 90`, split over `n=3` rounds
-            # as `[30, 30, 30]`, i.e. `30 * 5 = 150` per round and 450 in total --
-            # 3 pieces over the cap of 447, which `validate_plan` reported as
-            # "Demand/overproduction violation".  `max_overproduction_ratio` is 0 in
-            # the semi-final rule set, so the equality is not a tolerance question.
-            total_k = _ceil(order.pieces / parallel)
-            if total_k * parallel != order.pieces:
-                continue                      # this parallel count cannot land it
-            if total_k < n:
-                continue                      # n rounds each need >= 1 segment
-            per, extra = divmod(total_k, n)
-            if per < 1:
+            k_hi = k_hi_for(parallel)
+            if k_hi < k_lo:
                 continue
-            ks = [per + 1] * extra + [per] * (n - extra)
-            rounds = []
-            for k in ks:
-                r = model.make_round(ids, [k], parallel, blank)
-                if r is None:
-                    rounds = None
-                    break
-                rounds.append(r)
-            if rounds is not None:
-                return Batch(ids, blank.bid, tuple(rounds))
-        return None
-
-    order_pref = list(range(1, cfg.max_rounds + 1))
-    if randomized:
-        rng.shuffle(order_pref)
-    for n in order_pref:
-        if n > order.pieces:
+            total_k = max(n * k_lo, _ceil(order.pieces / parallel))
+            if total_k > n * k_hi or parallel * total_k > cap:
+                continue
+            candidates.append((total_k + n, parallel * total_k, parallel, total_k))
+        if not candidates:
             continue
-        got = try_shape(n)
-        if got is not None:
-            return got
+        candidates.sort()
+        if randomized and len(candidates) > 1:
+            # Keep the knife/yield ranking, vary only among equally good shapes so
+            # the annealer still sees a different incumbent on each restart.
+            tied = [c for c in candidates if c[:2] == candidates[0][:2]]
+            rng.shuffle(tied)
+            candidates = tied + candidates[len(tied):]
+        for _, _, parallel, total_k in candidates:
+            got = build(parallel, total_k, n)
+            if got is not None:
+                return got
     return None
 
 

@@ -128,7 +128,25 @@ def prepare(orders_path, blanks_path, root=Path('data/semi')):
         bed_weight=60000, trim=1,
         # constraints.txt clause 4: at most six cold-bed rounds per scheme.
         max_rounds=6,
-        max_overproduction_ratio=0,
+        # Over-production is LEGAL in the semi-final, and has to be.  Witnesses:
+        #   * constraints.txt clause 8 is a one-sided FLOOR -- "每订单冷床分配总重量须
+        #     不低于该订单重量" -- and no clause of the 12 forbids delivering more;
+        #   * RULES.md 12.5: the semi-final penalises SHORT delivery only, and the
+        #     excess simply does not enter the yield numerator ("超产不扣分，但超产部分
+        #     不计入成材率"), which `platform_score.Rules.numerator_capped_by_demand`
+        #     implements;
+        #   * `platform_check.check` already treats the piece demand as a floor and
+        #     reports only `short_delivery`.
+        # The cap cannot be 0, because 3,304 of the 9,999 valid orders then have NO
+        # legal scheme at all: the 50 m bed floor fixes a minimum segment count, and
+        # for those orders the demand is not divisible into it, so every round set
+        # either strands pieces or over-delivers.  Measured with
+        # `diagnostics/semi_overproduction_probe.py`:
+        # 3,135 of them need <=0.5% and 169 need <=2%, none needs more, and 2% is
+        # therefore the smallest ratio that admits every order.  The solver still
+        # aims for exact delivery -- over-delivery is uncredited and costs billet
+        # weight in the denominator -- so this is an envelope, not a target.
+        max_overproduction_ratio=0.02,
         objective='lex', search_max_group=8, length_mode='net_shared_trim',
     )
     (root / 'competition.config.json').write_text(json.dumps(config, indent=2) + '\n', encoding='utf-8')
@@ -152,6 +170,8 @@ def prepare(orders_path, blanks_path, root=Path('data/semi')):
         'assumptions': [
             'one shared 1 m trim at each round end; never written into length_scheme',
             'coverage counts orders sharing a single cold-bed round',
+            'over-production is allowed but uncredited, capped at 2% per order '
+            '(constraints clause 8 is a floor; RULES.md 12.5 penalises short delivery only)',
             'weight 40/30/20/10 with an independent time subscore (PDF 九); '
             'RULES.md records a conflicting Q&A claim that time is folded into yield',
             'knife baseline for the semi-final round is unknown; left unset',

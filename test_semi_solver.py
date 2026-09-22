@@ -20,10 +20,11 @@ allocates exactly `pieces` pieces at 1 parallel bar hits the demand precisely an
 never trips the overproduction ceiling.
 """
 import math
+import random
 import unittest
 
-from solver import (Blank, Config, ModelError, Order, brute_force, search_10s,
-                    validate_plan)
+from solver import (Blank, Config, Model, ModelError, Order, _solo_scheme,
+                    brute_force, search_10s, validate_plan)
 
 LINEAR = math.pi * (20 / 1000) ** 2 / 4 * 7850
 
@@ -166,6 +167,41 @@ class SemiSolverTests(unittest.TestCase):
         too_many = [scheme([{"A": 2.0}] * 7, ["A"])]
         with self.assertRaisesRegex(ModelError, "Invalid round count"):
             validate_plan(too_many, orders, cfg, self.blanks)
+
+    def test_solo_scheme_spends_the_cap_when_exact_delivery_is_impossible(self):
+        """A 5-piece order on a bed that holds 4 segments per bar has no exact shape.
+
+        `parallel = 1` would need `k = 5` segments, past the 4 the 10 m bed admits at
+        a 2 m定尺, and `parallel = 2` delivers 6 pieces for `k = 3`.  The old shape
+        required `total_k * parallel == pieces`, so `parallel = 2` was skipped and
+        `_solo_scheme` returned None -- the failure that cost 3,304 of the 9,999 real
+        semi-final orders their scheme, and with them a clause 12 violation each.
+        With cap room the shape is legal: constraints.txt clause 8 is a one-sided
+        floor and RULES.md 12.5 penalises short delivery only.
+        """
+        cfg = semi_cfg(bed_length=10, min_bed_length=0, bed_width=2, trim=1,
+                       max_rounds=1, max_overproduction_ratio=0.2)
+        orders = [order("P", 5)]
+        model = Model(orders, cfg, self.blanks)
+        got = _solo_scheme(model, (0,), self.blanks[0], random.Random(0), None)
+        self.assertIsNotNone(got)
+        delivered = sum(k * r.parallel for r in got.rounds for k in r.ks)
+        self.assertGreaterEqual(delivered, 5)
+        self.assertLessEqual(delivered, model.caps[0])
+
+    def test_solo_scheme_refuses_the_same_order_without_cap_room(self):
+        """The cap is the ceiling, so removing it brings the old failure back.
+
+        This pins the mechanism rather than the accident: `None` here is correct
+        behaviour (`validate_plan` would reject the 6-piece shape), and it is only
+        reachable because `max_overproduction_ratio` is 0 -- which is exactly why the
+        semi-final config must not use 0.
+        """
+        cfg = semi_cfg(bed_length=10, min_bed_length=0, bed_width=2, trim=1,
+                       max_rounds=1, max_overproduction_ratio=0)
+        orders = [order("P", 5)]
+        model = Model(orders, cfg, self.blanks)
+        self.assertIsNone(_solo_scheme(model, (0,), self.blanks[0], random.Random(0), None))
 
 
 if __name__ == "__main__":

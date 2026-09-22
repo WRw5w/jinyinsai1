@@ -216,7 +216,8 @@ def check(plan, data=Path('data'), check_delivery=True, weight_mode='strict',
         # preliminary scripts' over-production penalty was documented as broken and
         # the semi-final round penalises under-production instead, so neither round
         # reports an overshoot as a violation of the *checker*.  Overshoot still
-        # costs score, because the yield numerator stops at the demanded mass.
+        # costs score under the semi-final rule, but that cap lives where the score
+        # is computed (`platform_score.Rules.numerator_capped_by_demand`), not here.
         if check_delivery and produced[oid] < order['pieces']:
             error('short_delivery', order=oid, actual=produced[oid], required=order['pieces'])
     # constraints.txt clause 8 (semi-final only): the mass allocated on the cold beds

@@ -6,7 +6,7 @@
   "bed_weight": 60000,
   "trim": 1,
   "max_rounds": 6,
-  "max_overproduction_ratio": 0.02,
+  "max_overproduction_ratio": 0.10,
   "objective": "lex",
   "search_max_group": 8,
   "length_mode": "net_shared_trim"

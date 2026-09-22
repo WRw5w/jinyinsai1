@@ -164,15 +164,34 @@ def build(args):
                          + (['semi: <=6 rounds per scheme', 'semi: adjacent rounds per order',
                              'semi: per-order allocated mass >= order weight'] if round_name == 'semi' else []))
     atomic_json(output / 'validation_report.json', report)
+    if round_name == 'semi':
+        anomaly_note = ('原始订单 B20270281 的订单重量为 -25.418 t（非正重量），无法给出物理可行的锯切方案。'
+                        '本包按题面允许的异常数据过滤流程隔离该订单，没有猜测其正确重量，没有添加虚构订单方案。原始文件未改动。')
+        knife_note = '按复赛口径（每轮一组头尾，刀数 = 段数 + 1）计算的预测刀数：'
+        calibration_note = ('复赛未公布基准刀数与时间子分口径，以上总分为本地模型结果，'
+                            '不代表已取得官方评分器源码或穷尽全部规则。')
+        tail_note = ('本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。'
+                     f"若官方校验要求原始 {audit['source_orders']} 个订单号全部出现，"
+                     '必须先取得 B20270281 的正确值或官方异常过滤口径；不能用凭空补值来保证通过。'
+                     '本脚本没有执行网页上传。')
+    else:
+        anomaly_note = ('原始订单 A20260949 的定尺为 -1100 mm，无法用于物理可行的锯切。'
+                        '本包按题面允许的异常数据过滤流程隔离该订单，没有猜测其正确定尺，没有添加虚构订单方案。原始文件未改动。')
+        knife_note = '按七个官方校准点复现的预测刀数：'
+        calibration_note = ('七个历史官方校准点的刀数（及展示成材率）均已复现，'
+                            '不代表已取得评分器源码或穷尽全部规则。')
+        tail_note = ('本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。'
+                     '若官方校验要求原始 5000 个订单号全部出现，必须先取得 A20260949 的正确值'
+                     '或官方异常过滤口径；不能用凭空补值来保证通过。本脚本没有执行网页上传。')
     note = f'''# 提交候选包说明
 
 上传文件：{zip_path.name}，压缩包根目录仅包含同名 JSON。
 
-有效订单：{len(orders)} / {audit['source_orders']}。原始订单 A20260949 的定尺为 -1100 mm，无法用于物理可行的锯切。本包按题面允许的异常数据过滤流程隔离该订单，没有猜测其正确定尺，没有添加虚构订单方案。原始文件未改动。
+有效订单：{len(orders)} / {audit['source_orders']}。{anomaly_note}
 
-按七个官方校准点复现的预测刀数：{prediction['knives']}；预测成材率：{prediction['yield_rate']:.8%}；组合覆盖率：{prediction['coverage']:.8%}（分母为有效订单数）；按原始全部订单计的组合覆盖率：{report['combination_coverage_over_source']:.8%}。
+{knife_note}{prediction['knives']}；预测成材率：{prediction['yield_rate']:.8%}；组合覆盖率：{prediction['coverage']:.8%}（分母为有效订单数）；按原始全部订单计的组合覆盖率：{report['combination_coverage_over_source']:.8%}。
 
-预测总分：刀数子分封顶假设下 {prediction['score_capped']:.6f}；不封顶假设下 {prediction['score_uncapped']:.6f}。新包仍需官方实测。七个历史官方校准点的刀数（及展示成材率）均已复现，不代表已取得评分器源码或穷尽全部规则。
+预测总分：刀数子分封顶假设下 {prediction['score_capped']:.6f}；不封顶假设下 {prediction['score_uncapped']:.6f}。新包仍需官方实测。{calibration_note}
 
 输入方案：{Path(args.input).resolve()}。length_scheme 只写净定尺整数倍，整轮统一加 2m 余量计算长度和承重。本打包步骤只合并同钢种、同直径、同坯型的方案，保留每轮参数。每个新方案最多 {cfg.max_rounds} 轮，符合当前模型上限。详见 validation_report.json。
 
@@ -182,7 +201,7 @@ def build(args):
 
 独立校验器直接读取原始 CSV 和提交 JSON：整数倍、含余量的长度/承重、宽度、交付数量及物料检查均通过。已复现旧包 11315 条整数倍错误与 44 条长度错误；重量采用比反馈数量更保守的检查，不声称已拿到官方评分器源码。
 
-本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。若官方校验要求原始 5000 个订单号全部出现，必须先取得 A20260949 的正确值或官方异常过滤口径；不能用凭空补值来保证通过。本脚本没有执行网页上传。
+{tail_note}
 
 若需按队名重新打包，请在原打包命令中添加 `--team 实际队名`，同时保留原 --input、--config、--audit、--output-dir 参数，避免误选旧方案。
 '''

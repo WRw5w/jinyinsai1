@@ -1,0 +1,377 @@
+{
+  "orders": 9999,
+  "orders_stranded_by_the_old_rule": 3304,
+  "geometry": {
+    "bed_length": 150,
+    "min_bed_length": 50,
+    "round_trim": 2,
+    "segment_trim": 0.0,
+    "bed_weight": 60000,
+    "max_rounds": 6,
+    "usable_length": 671.3946,
+    "length_cap": 150
+  },
+  "forced_overshoot": {
+    "0": 0,
+    "<=0.5%": 3135,
+    "<=2%": 169,
+    "<=5%": 0,
+    "<=10%": 0,
+    "<=25%": 0,
+    ">25%": 0,
+    "physics_infeasible": 0
+  },
+  "stranded_orders_remaining_per_cap": {
+    "0.00%": 0,
+    "0.50%": 169,
+    "1.00%": 3,
+    "2.00%": 0,
+    "5.00%": 0,
+    "10.00%": 0,
+    "20.00%": 0
+  },
+  "worst_overshoot": [
+    {
+      "oid": "B20276048",
+      "pieces": 166,
+      "size": 10.62,
+      "over": 2,
+      "ratio": 0.012,
+      "parallel": 3,
+      "segments": 56,
+      "rounds": 5
+    },
+    {
+      "oid": "B20272704",
+      "pieces": 83,
+      "size": 11.0,
+      "over": 1,
+      "ratio": 0.012,
+      "parallel": 2,
+      "segments": 42,
+      "rounds": 4
+    },
+    {
+      "oid": "B20273448",
+      "pieces": 193,
+      "size": 11.0,
+      "over": 2,
+      "ratio": 0.0104,
+      "parallel": 3,
+      "segments": 65,
+      "rounds": 5
+    },
+    {
+      "oid": "B20276368",
+      "pieces": 101,
+      "size": 9.54,
+      "over": 1,
+      "ratio": 0.0099,
+      "parallel": 2,
+      "segments": 51,
+      "rounds": 4
+    },
+    {
+      "oid": "B20275811",
+      "pieces": 103,
+      "size": 9.54,
+      "over": 1,
+      "ratio": 0.0097,
+      "parallel": 2,
+      "segments": 52,
+      "rounds": 4
+    },
+    {
+      "oid": "B20272724",
+      "pieces": 103,
+      "size": 8.28,
+      "over": 1,
+      "ratio": 0.0097,
+      "parallel": 2,
+      "segments": 52,
+      "rounds": 4
+    },
+    {
+      "oid": "B20273433",
+      "pieces": 107,
+      "size": 10.9,
+      "over": 1,
+      "ratio": 0.0093,
+      "parallel": 2,
+      "segments": 54,
+      "rounds": 5
+    },
+    {
+      "oid": "B20276194",
+      "pieces": 109,
+      "size": 12.3,
+      "over": 1,
+      "ratio": 0.0092,
+      "parallel": 2,
+      "segments": 55,
+      "rounds": 5
+    },
+    {
+      "oid": "B20271984",
+      "pieces": 109,
+      "size": 8.05,
+      "over": 1,
+      "ratio": 0.0092,
+      "parallel": 2,
+      "segments": 55,
+      "rounds": 4
+    },
+    {
+      "oid": "B20270822",
+      "pieces": 113,
+      "size": 10.06,
+      "over": 1,
+      "ratio": 0.0088,
+      "parallel": 2,
+      "segments": 57,
+      "rounds": 5
+    },
+    {
+      "oid": "B20270322",
+      "pieces": 381,
+      "size": 8.9,
+      "over": 3,
+      "ratio": 0.0079,
+      "parallel": 4,
+      "segments": 96,
+      "rounds": 6
+    },
+    {
+      "oid": "B20273290",
+      "pieces": 127,
+      "size": 10.68,
+      "over": 1,
+      "ratio": 0.0079,
+      "parallel": 2,
+      "segments": 64,
+      "rounds": 5
+    },
+    {
+      "oid": "B20277447",
+      "pieces": 127,
+      "size": 8.05,
+      "over": 1,
+      "ratio": 0.0079,
+      "parallel": 2,
+      "segments": 64,
+      "rounds": 4
+    },
+    {
+      "oid": "B20278627",
+      "pieces": 262,
+      "size": 8.4,
+      "over": 2,
+      "ratio": 0.0076,
+      "parallel": 3,
+      "segments": 88,
+      "rounds": 6
+    },
+    {
+      "oid": "B20277435",
+      "pieces": 131,
+      "size": 8.05,
+      "over": 1,
+      "ratio": 0.0076,
+      "parallel": 2,
+      "segments": 66,
+      "rounds": 4
+    },
+    {
+      "oid": "B20276106",
+      "pieces": 137,
+      "size": 10.62,
+      "over": 1,
+      "ratio": 0.0073,
+      "parallel": 2,
+      "segments": 69,
+      "rounds": 6
+    },
+    {
+      "oid": "B20276221",
+      "pieces": 137,
+      "size": 9.34,
+      "over": 1,
+      "ratio": 0.0073,
+      "parallel": 2,
+      "segments": 69,
+      "rounds": 5
+    },
+    {
+      "oid": "B20275866",
+      "pieces": 277,
+      "size": 8.97,
+      "over": 2,
+      "ratio": 0.0072,
+      "parallel": 3,
+      "segments": 93,
+      "rounds": 6
+    },
+    {
+      "oid": "B20277484",
+      "pieces": 277,
+      "size": 7.0,
+      "over": 2,
+      "ratio": 0.0072,
+      "parallel": 3,
+      "segments": 93,
+      "rounds": 5
+    },
+    {
+      "oid": "B20277464",
+      "pieces": 277,
+      "size": 6.4,
+      "over": 2,
+      "ratio": 0.0072,
+      "parallel": 3,
+      "segments": 93,
+      "rounds": 5
+    },
+    {
+      "oid": "B20273245",
+      "pieces": 277,
+      "size": 7.2,
+      "over": 2,
+      "ratio": 0.0072,
+      "parallel": 3,
+      "segments": 93,
+      "rounds": 5
+    },
+    {
+      "oid": "B20278058",
+      "pieces": 139,
+      "size": 7.4,
+      "over": 1,
+      "ratio": 0.0072,
+      "parallel": 2,
+      "segments": 70,
+      "rounds": 4
+    },
+    {
+      "oid": "B20273278",
+      "pieces": 139,
+      "size": 6.4,
+      "over": 1,
+      "ratio": 0.0072,
+      "parallel": 2,
+      "segments": 70,
+      "rounds": 4
+    },
+    {
+      "oid": "B20272778",
+      "pieces": 139,
+      "size": 6.2,
+      "over": 1,
+      "ratio": 0.0072,
+      "parallel": 2,
+      "segments": 70,
+      "rounds": 4
+    },
+    {
+      "oid": "B20270177",
+      "pieces": 139,
+      "size": 6.3,
+      "over": 1,
+      "ratio": 0.0072,
+      "parallel": 2,
+      "segments": 70,
+      "rounds": 4
+    }
+  ],
+  "sample_stranded": [
+    {
+      "oid": "B20270003",
+      "pieces": 617,
+      "size": 4.55,
+      "weight": 40165.0
+    },
+    {
+      "oid": "B20270007",
+      "pieces": 353,
+      "size": 6.84,
+      "weight": 34560.0
+    },
+    {
+      "oid": "B20270008",
+      "pieces": 346,
+      "size": 5.9,
+      "weight": 29161.0
+    },
+    {
+      "oid": "B20270009",
+      "pieces": 457,
+      "size": 6.4,
+      "weight": 41801.0
+    },
+    {
+      "oid": "B20270014",
+      "pieces": 337,
+      "size": 6.2,
+      "weight": 29914.0
+    },
+    {
+      "oid": "B20270016",
+      "pieces": 1119,
+      "size": 8.78,
+      "weight": 140672.0
+    },
+    {
+      "oid": "B20270018",
+      "pieces": 733,
+      "size": 4.9,
+      "weight": 51419.0
+    },
+    {
+      "oid": "B20270020",
+      "pieces": 401,
+      "size": 4.9,
+      "weight": 28070.0
+    },
+    {
+      "oid": "B20270024",
+      "pieces": 1399,
+      "size": 4.9,
+      "weight": 98099.0
+    },
+    {
+      "oid": "B20270026",
+      "pieces": 579,
+      "size": 6.4,
+      "weight": 53006.0
+    },
+    {
+      "oid": "B20270031",
+      "pieces": 591,
+      "size": 4.7,
+      "weight": 39747.0
+    },
+    {
+      "oid": "B20270032",
+      "pieces": 596,
+      "size": 6.4,
+      "weight": 54550.0
+    },
+    {
+      "oid": "B20270034",
+      "pieces": 367,
+      "size": 4.95,
+      "weight": 25975.0
+    },
+    {
+      "oid": "B20270037",
+      "pieces": 911,
+      "size": 4.9,
+      "weight": 63863.0
+    },
+    {
+      "oid": "B20270040",
+      "pieces": 743,
+      "size": 6.1,
+      "weight": 64858.0
+    }
+  ]
+}

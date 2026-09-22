@@ -1,0 +1,19 @@
+{
+  "orders": 9999,
+  "failures": 0,
+  "sample_failures": [],
+  "rounds_per_scheme": {
+    "1": 6997,
+    "2": 2367,
+    "3": 633,
+    "4": 2
+  },
+  "overshoot": {
+    "total_pieces": 74377.0,
+    "relative_to_demand": 0.007261,
+    "max_order_ratio": 0.02,
+    "p50": 0.007561,
+    "p99": 0.019608,
+    "orders_with_any_overshoot": 8919
+  }
+}

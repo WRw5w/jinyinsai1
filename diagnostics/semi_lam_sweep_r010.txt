@@ -1,0 +1,54 @@
+over-production allowance r=0.1
+[NP01:43.0] 3532 orders -> 1766 schemes (0 solo, 0 shapeless)  17s
+[C60:26.5] 2205 orders -> 1103 schemes (1 solo, 0 shapeless)  39s
+[30C:45.0] 788 orders -> 394 schemes (0 solo, 0 shapeless)  43s
+[GB40:28.0] 502 orders -> 251 schemes (0 solo, 0 shapeless)  48s
+[GC-4:32.0] 248 orders -> 124 schemes (0 solo, 0 shapeless)  50s
+[GC-7:52.0] 220 orders -> 110 schemes (0 solo, 0 shapeless)  51s
+[GC-9:36.0] 208 orders -> 104 schemes (0 solo, 0 shapeless)  53s
+[UE503:38.0] 202 orders -> 101 schemes (0 solo, 0 shapeless)  54s
+[GC-10:46.0] 192 orders -> 96 schemes (0 solo, 0 shapeless)  55s
+[GC-6:37.0] 184 orders -> 92 schemes (0 solo, 0 shapeless)  56s
+[GC-5:42.0] 176 orders -> 88 schemes (0 solo, 0 shapeless)  57s
+[GC-8:52.0] 172 orders -> 86 schemes (0 solo, 0 shapeless)  58s
+[GC-3:56.0] 146 orders -> 73 schemes (0 solo, 0 shapeless)  58s
+[GC-11:56.0] 142 orders -> 71 schemes (0 solo, 0 shapeless)  59s
+[AB-2:38.83] 116 orders -> 58 schemes (0 solo, 0 shapeless)  60s
+[GC-5:38.0] 100 orders -> 50 schemes (0 solo, 0 shapeless)  60s
+[GC-2:20.0] 92 orders -> 46 schemes (0 solo, 0 shapeless)  61s
+[AB-2:37.5] 68 orders -> 34 schemes (0 solo, 0 shapeless)  62s
+[UE501:40.0] 64 orders -> 32 schemes (0 solo, 0 shapeless)  62s
+[SALE06:23.0] 50 orders -> 25 schemes (0 solo, 0 shapeless)  63s
+[42A:34.0] 46 orders -> 23 schemes (0 solo, 0 shapeless)  63s
+[SALE04:27.8] 46 orders -> 23 schemes (0 solo, 0 shapeless)  64s
+[UE502:50.0] 46 orders -> 23 schemes (0 solo, 0 shapeless)  64s
+[GC-1:55.0] 44 orders -> 22 schemes (0 solo, 0 shapeless)  64s
+[SALE08:36.0] 44 orders -> 22 schemes (0 solo, 0 shapeless)  64s
+[GC-5:32.0] 42 orders -> 21 schemes (0 solo, 0 shapeless)  65s
+[Z30:23.0] 42 orders -> 21 schemes (0 solo, 0 shapeless)  65s
+[SALE07:34.0] 40 orders -> 20 schemes (0 solo, 0 shapeless)  66s
+[UE503:45.0] 40 orders -> 20 schemes (0 solo, 0 shapeless)  66s
+[SALE03:24.0] 38 orders -> 19 schemes (0 solo, 0 shapeless)  66s
+[UE505:40.0] 36 orders -> 18 schemes (0 solo, 0 shapeless)  66s
+[SALE05:23.0] 34 orders -> 17 schemes (0 solo, 0 shapeless)  67s
+[UE505:37.5] 30 orders -> 15 schemes (0 solo, 0 shapeless)  67s
+[SALE01:34.0] 22 orders -> 11 schemes (0 solo, 0 shapeless)  67s
+[SALE02:24.0] 22 orders -> 11 schemes (0 solo, 0 shapeless)  67s
+[XL2:38.0] 20 orders -> 10 schemes (0 solo, 0 shapeless)  67s
+
+collected 5000 schemes in 67s; 0 schemes have no legal shape
+lam=0       schemes=5000  knives=239,966  yield=0.9459  coverage=0.9999  score=73.376  viol=0  overshoot=6,038,205kg (1.19%)
+lam=100     schemes=5000  knives=211,165  yield=0.9433  coverage=0.9999  score=75.344  viol=0  overshoot=6,485,291kg (1.28%)
+lam=200     schemes=5000  knives=196,501  yield=0.9395  coverage=0.9999  score=76.505  viol=0  overshoot=6,945,825kg (1.37%)
+lam=400     schemes=5000  knives=186,919  yield=0.9348  coverage=0.9999  score=77.302  viol=0  overshoot=7,479,960kg (1.47%)
+lam=800     schemes=5000  knives=180,686  yield=0.9288  coverage=0.9999  score=77.787  viol=0  overshoot=7,880,487kg (1.55%)
+lam=1200    schemes=5000  knives=178,482  yield=0.9252  coverage=0.9999  score=77.924  viol=0  overshoot=8,116,012kg (1.59%)
+lam=1600    schemes=5000  knives=177,277  yield=0.9224  coverage=0.9999  score=77.977  viol=0  overshoot=8,288,738kg (1.63%)
+lam=2400    schemes=5000  knives=175,952  yield=0.9181  coverage=0.9999  score=78.001  viol=0  overshoot=8,508,433kg (1.67%)
+lam=3200    schemes=5000  knives=175,291  yield=0.9150  coverage=0.9999  score=77.985  viol=0  overshoot=8,650,926kg (1.70%)
+
+CHOSEN lam=2400: knives=175,952 yield=0.9181 coverage=0.9999 score=78.001 viol=0
+
+platform_check passed: True {}
+validate_plan: rounds=12559 knives=190341 yield=0.9440 coverage=0.9999
+wrote runs\sweepsrc_010\result.json

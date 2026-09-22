@@ -43,6 +43,18 @@ class Rules:
                          40/30/20/10; RULES.md records a Q&A claim that the time
                          term is folded into yield, exposed as the alternative
                          (40, 40, 20, 0) so the two can be compared directly.
+    `numerator_capped_by_demand`
+                         True -> the yield numerator stops at each order's
+                         demanded mass, so over-production is produced but not
+                         credited ("超产不扣分，但超产部分不计入成材率").
+    `penalise_short_delivery`
+                         True -> an order delivered below its piece demand, or
+                         missing from the plan entirely, is one violation each.
+
+    The two delivery switches are semi-final rules and default to False: the
+    preliminary round's over-production penalty was documented as broken and
+    every preliminary feedback was reproduced with a numerator that counts all
+    produced kilograms, so `prelim` keeps its calibrated arithmetic bit for bit.
     """
 
     round: str = 'prelim'
@@ -54,6 +66,9 @@ class Rules:
     baseline_knives: float = 90000.0
     time_subscore: float = 100.0
     penalty_per_violation: float = 5.0
+    numerator_capped_by_demand: bool = False
+    penalise_short_delivery: bool = False
+    segment_convention: str = 'floor'   # or 'nearest'; see row_segments()
 
     @staticmethod
     def prelim(baseline_knives=90000.0):
@@ -62,7 +77,9 @@ class Rules:
 
     @staticmethod
     def semi(baseline_knives=90000.0, weights=(0.4, 0.3, 0.2, 0.1), max_rounds=6):
-        return Rules('semi', 'round', True, max_rounds, True, weights, baseline_knives)
+        # Keywords, not positions: the eighth positional field is `time_subscore`.
+        return Rules('semi', 'round', True, max_rounds, True, weights, baseline_knives,
+                     numerator_capped_by_demand=True, penalise_short_delivery=True)
 
 
 # ===========================================================================
@@ -76,6 +93,24 @@ class ScoringOrder:
     linear_weight: float
     physical_linear_weight: float
     required_kg: float = 0.0
+    pieces: int = 0
+
+    @property
+    def demand_kg(self):
+        """Mass a plan may credit for this order under the semi-final numerator.
+
+        `pieces` is the delivery demand exactly as `solver.load_orders` derives it
+        (`ceil(weight / (size * mu_phys))`).  The credited mass is that piece count
+        at the *scoring* (integer-diameter) linear weight, i.e. the same definition
+        of over-production `max_overproduction_ratio` uses -- delivering more than
+        `pieces` is the overshoot the semi-final numerator refuses to count.
+
+        Fixtures that leave both fields at zero get no cap at all, which is why
+        `prelim` and the hand-built rule fixtures are unaffected.
+        """
+        if self.pieces > 0:
+            return self.pieces * self.size_m * self.linear_weight
+        return self.required_kg
 
 
 @dataclass(frozen=True)
@@ -138,11 +173,17 @@ def load_scoring_data(data=Path('data'), round='prelim'):
             if oid in orders:
                 raise ValueError(f'Duplicate order: {oid}')
             integer_diameter = int(diameter)
+            physical_linear = math.pi * (diameter / 1000) ** 2 / 4 * 9860
+            # Same derivation as `solver.load_orders`, including its epsilon, so the
+            # delivery check here cannot disagree with the plan the solver produced.
+            ratio = weight_kg / (physical_linear * size)
+            pieces = max(1, math.ceil(ratio - 1e-10 * max(1, abs(ratio))))
             orders[oid] = ScoringOrder(
                 size, diameter, integer_diameter,
                 math.pi * (integer_diameter / 1000) ** 2 / 4 * 9860,
-                math.pi * (diameter / 1000) ** 2 / 4 * 9860,
+                physical_linear,
                 weight_kg,
+                pieces,
             )
     blanks = {}
     with (data / blank_file).open(encoding=blank_enc, newline='') as f:
@@ -157,9 +198,33 @@ def load_scoring_data(data=Path('data'), round='prelim'):
 # ===========================================================================
 # Knife accounting
 # ===========================================================================
+def row_segments(length_m, size_m, convention='floor'):
+    """Pieces of `size_m` the platform credits for one declared net length.
+
+    Two readings of the same declared number, and they disagree on **39.8%** of
+    the semi-final `(k, size)` combinations (`data/semi/orders.normalized.csv`,
+    measured 2026-09-21): `solver._export` writes `round(k * size, 9)`, and the
+    float nearest that value is not always >= the exact multiple.  With
+    `size_m = 3.6, k = 5` the written 18.0 divides to 4.999999999999999, so
+
+    * `'floor'`  -> 4   (what `row_metrics` charges knives for: `int(L // s)`)
+    * `'nearest'` -> 5  (what `platform_check` credits pieces for:
+                         `abs(L / s - k) <= 1e-8`)
+
+    Neither is settled by the preliminary feedbacks, because those plans were
+    built to *exploit* the floor.  `'floor'` stays the default so no calibrated
+    number moves silently; the semi-final knife model should be re-priced under
+    `'nearest'` before the first semi submission is trusted.
+    """
+    if convention == 'floor':
+        return int(length_m // size_m)
+    if convention == 'nearest':
+        return int(round(length_m / size_m))
+    raise ValueError(f'unknown segment convention: {convention!r}')
+
+
 def entry_knives(length_m, size_m):
     """Preliminary-round knives for one (round, order) segment.
-
     `max(2, int(L // size) + 1)`, i.e. one parting cut plus a full head/tail
     pair charged to *every* order segment.  Use the observed floating `//`
     semantics; never replace with int(L / s).
@@ -190,7 +255,7 @@ def row_metrics(length_scheme, parallel, blank_type, blank_count, scoring_data, 
         segments = 0
         for oid, length in length_scheme.items():
             order = scoring_data.orders[oid]
-            segments += int(length // order.size_m)
+            segments += row_segments(length, order.size_m, rules.segment_convention)
             finished += length * parallel * order.linear_weight
         knives = segments + 1
     else:
@@ -236,6 +301,30 @@ def detect_violations(plan, context, rules):
                 js = sorted(js)
                 if len(js) > 1 and js != list(range(js[0], js[0] + len(js))):
                     bump('continuity', scheme=a, order=oid, rounds=js)
+    if rules.penalise_short_delivery:
+        # Semi-final delivery floor (constraints.txt clause 8 and the PDF's
+        # under-production penalty).  Pieces are recounted the way
+        # `platform_check` counts them -- the nearest integer of L / size -- and
+        # NOT with the floor `row_metrics` charges knives for: the solver built
+        # every row as an exact `k` multiple, so the nearest integer is the
+        # declared delivery, and flooring the float would report a shortfall on
+        # 39.8% of the (k, size) combinations the semi data can produce.
+        produced = {}
+        for batch in plan:
+            for scheme, parallel in zip(batch.get('length_scheme') or [],
+                                        batch.get('counts') or []):
+                for oid, length in scheme.items():
+                    order = context.orders.get(oid)
+                    if order is None:
+                        continue
+                    produced[oid] = (produced.get(oid, 0)
+                                     + row_segments(length, order.size_m, 'nearest') * parallel)
+        for oid, order in context.orders.items():
+            got = produced.get(oid, 0)
+            if got == 0 and oid not in order_rounds:
+                bump('missing_order', order=oid)          # clause 12
+            elif got < order.pieces:
+                bump('under_delivery', order=oid, produced=got, required=order.pieces)
     return violations, detail
 
 
@@ -319,6 +408,7 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
     knives, finished, physical_finished, raw = 0, 0.0, 0.0, 0.0
     rows = entries = 0
     included, combined = set(), set()
+    finished_by_order = {}      # oid -> produced mass, for the semi-final numerator cap
     for batch in plan:
         names = batch['orders']
         if any(oid not in context.orders for oid in names):
@@ -342,6 +432,17 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
             entries += len(scheme)
             physical_finished += sum(length * parallel * context.orders[oid].physical_linear_weight
                                      for oid, length in scheme.items())
+            for oid, length in scheme.items():
+                finished_by_order[oid] = (finished_by_order.get(oid, 0.0)
+                                          + length * parallel * context.orders[oid].linear_weight)
+    # Semi-final numerator: overshoot is produced but not credited, so each order
+    # contributes at most its demanded mass (see `ScoringOrder.demand_kg`).
+    credited_finished = finished
+    if rules.numerator_capped_by_demand:
+        credited_finished = 0.0
+        for oid, mass in finished_by_order.items():
+            demand = context.orders[oid].demand_kg
+            credited_finished += min(mass, demand) if demand > 0 else mass
     violations, violation_detail = detect_violations(plan, context, rules)
     violation_count = sum(violations.values())
     coverage = len(combined) / len(context.orders)
@@ -350,8 +451,13 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
         rules=dict(knife_add_per=rules.knife_add_per, coverage_shared=rules.coverage_shared,
                    max_rounds=rules.max_rounds, continuity=rules.continuity,
                    weights=list(rules.weights), baseline_knives=rules.baseline_knives,
-                   time_subscore=rules.time_subscore),
-        knives=knives, finished_weight=finished, blank_weight=raw, raw_weight=raw,
+                   time_subscore=rules.time_subscore,
+                   numerator_capped_by_demand=rules.numerator_capped_by_demand,
+                   penalise_short_delivery=rules.penalise_short_delivery,
+                   segment_convention=rules.segment_convention),
+        knives=knives, finished_weight=credited_finished,
+        finished_weight_uncapped=finished, overshoot_kg=finished - credited_finished,
+        blank_weight=raw, raw_weight=raw,
         physical_finished_weight=physical_finished,
         coverage=coverage, coverage_over_source=len(combined) / context.source_order_count,
         coverage_percent_rounded=round(100 * coverage, 2),
@@ -386,7 +492,7 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
             note='Knife cap confirmed by the 98.93 feedback; total cap moot (ceiling is exactly 100). '
                  'Displayed totals are quantised to 0.01.'),
     )
-    result.update(score_components(knives, finished, raw, coverage, rules))
+    result.update(score_components(knives, credited_finished, raw, coverage, rules))
     # Apply the explicit -5 per violation term the PDF prints alongside the weights.
     penalty = rules.penalty_per_violation * violation_count
     for key in ('score_capped', 'score_uncapped', 'score_from_rounded_subscores_capped',

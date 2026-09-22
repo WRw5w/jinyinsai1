@@ -1,0 +1,47 @@
+NP01:43.0	orders=3532	adjacent_pairs=3531	_can_share_pass=3531 (100.0%)
+C60:26.5	orders=2205	adjacent_pairs=2204	_can_share_pass=2204 (100.0%)
+30C:45.0	orders=788	adjacent_pairs=787	_can_share_pass=787 (100.0%)
+GB40:28.0	orders=502	adjacent_pairs=501	_can_share_pass=501 (100.0%)
+GC-4:32.0	orders=248	adjacent_pairs=247	_can_share_pass=247 (100.0%)
+GC-7:52.0	orders=220	adjacent_pairs=219	_can_share_pass=219 (100.0%)
+GC-9:36.0	orders=208	adjacent_pairs=207	_can_share_pass=207 (100.0%)
+UE503:38.0	orders=202	adjacent_pairs=201	_can_share_pass=201 (100.0%)
+GC-10:46.0	orders=192	adjacent_pairs=191	_can_share_pass=191 (100.0%)
+GC-6:37.0	orders=184	adjacent_pairs=183	_can_share_pass=183 (100.0%)
+GC-5:42.0	orders=176	adjacent_pairs=175	_can_share_pass=175 (100.0%)
+GC-8:52.0	orders=172	adjacent_pairs=171	_can_share_pass=171 (100.0%)
+GC-3:56.0	orders=146	adjacent_pairs=145	_can_share_pass=145 (100.0%)
+GC-11:56.0	orders=142	adjacent_pairs=141	_can_share_pass=141 (100.0%)
+AB-2:38.83	orders=116	adjacent_pairs=115	_can_share_pass=115 (100.0%)
+GC-5:38.0	orders=100	adjacent_pairs=99	_can_share_pass=99 (100.0%)
+GC-2:20.0	orders=92	adjacent_pairs=91	_can_share_pass=91 (100.0%)
+AB-2:37.5	orders=68	adjacent_pairs=67	_can_share_pass=67 (100.0%)
+UE501:40.0	orders=64	adjacent_pairs=63	_can_share_pass=63 (100.0%)
+SALE06:23.0	orders=50	adjacent_pairs=49	_can_share_pass=49 (100.0%)
+42A:34.0	orders=46	adjacent_pairs=45	_can_share_pass=45 (100.0%)
+SALE04:27.8	orders=46	adjacent_pairs=45	_can_share_pass=45 (100.0%)
+UE502:50.0	orders=46	adjacent_pairs=45	_can_share_pass=45 (100.0%)
+GC-1:55.0	orders=44	adjacent_pairs=43	_can_share_pass=43 (100.0%)
+SALE08:36.0	orders=44	adjacent_pairs=43	_can_share_pass=43 (100.0%)
+GC-5:32.0	orders=42	adjacent_pairs=41	_can_share_pass=41 (100.0%)
+Z30:23.0	orders=42	adjacent_pairs=41	_can_share_pass=41 (100.0%)
+SALE07:34.0	orders=40	adjacent_pairs=39	_can_share_pass=39 (100.0%)
+UE503:45.0	orders=40	adjacent_pairs=39	_can_share_pass=39 (100.0%)
+SALE03:24.0	orders=38	adjacent_pairs=37	_can_share_pass=37 (100.0%)
+UE505:40.0	orders=36	adjacent_pairs=35	_can_share_pass=35 (100.0%)
+SALE05:23.0	orders=34	adjacent_pairs=33	_can_share_pass=33 (100.0%)
+UE505:37.5	orders=30	adjacent_pairs=29	_can_share_pass=29 (100.0%)
+SALE01:34.0	orders=22	adjacent_pairs=21	_can_share_pass=21 (100.0%)
+SALE02:24.0	orders=22	adjacent_pairs=21	_can_share_pass=21 (100.0%)
+XL2:38.0	orders=20	adjacent_pairs=19	_can_share_pass=19 (100.0%)
+{
+  "orders": 9999,
+  "rounds_min_hist": {
+    "1": 7029,
+    "2": 2341,
+    "3": 628,
+    "4": 1
+  },
+  "orders_with_single_round_min": 7029,
+  "orders_needing_3plus": 629
+}
