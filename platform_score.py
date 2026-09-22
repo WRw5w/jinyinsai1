@@ -61,7 +61,7 @@ class Rules:
                      (0.4, 0.3, 0.2, 0.1), baseline_knives)
 
     @staticmethod
-    def semi(baseline_knives=90000.0, weights=(0.4, 0.3, 0.2, 0.1), max_rounds=6):
+    def semi(baseline_knives=160000.0, weights=(0.4, 0.3, 0.2, 0.1), max_rounds=6):
         return Rules('semi', 'round', True, max_rounds, True, weights, baseline_knives)
 
 
@@ -198,6 +198,19 @@ def row_metrics(length_scheme, parallel, blank_type, blank_count, scoring_data, 
     return knives, finished, blank_count * scoring_data.blank_weights[blank_type]
 
 
+def _demand_numerator_mass(order):
+    """Yield-numerator ceiling for one order: the mass of its DEMAND, not delivery.
+
+    The semi-final counts over-production as free but yield-less, so an order's
+    contribution to the yield numerator is capped at the mass of the pieces it
+    actually demanded.  The demand piece count mirrors the solver's
+    `ceil(weight / (size * physical_linear_weight))`; the credited mass then uses
+    the scoring (integer-diameter) linear weight, exactly as `row_metrics` does.
+    """
+    pieces = math.ceil(order.required_kg / (order.size_m * order.physical_linear_weight))
+    return pieces * order.size_m * order.linear_weight
+
+
 # ===========================================================================
 # Violations
 # ===========================================================================
@@ -301,7 +314,17 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
     every `round(x, 2)` in this function.
     """
     if rules is None:
-        base = baseline_knives if baseline_knives is not None else 90000.0
+        # The fallback baseline is round-specific: the preliminary round used
+        # 90000, the semi-final raised it to 160000 (09-21 rule update).  Callers
+        # should pass `baseline_knives` explicitly; this default only fires when
+        # they do not, and it must not silently price a semi plan against the
+        # preliminary baseline.
+        if baseline_knives is not None:
+            base = baseline_knives
+        elif round_name == 'semi':
+            base = 160000.0
+        else:
+            base = 90000.0
         if round_name == 'semi':
             rules = Rules.semi(base)
         elif round_name == 'prelim':
@@ -317,6 +340,7 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
 
     context = scoring_data if scoring_data is not None else load_scoring_data(data, round_name)
     knives, finished, physical_finished, raw = 0, 0.0, 0.0, 0.0
+    delivered_mass = {}      # semi only: oid -> scoring-diameter mass already credited
     rows = entries = 0
     included, combined = set(), set()
     for batch in plan:
@@ -336,7 +360,20 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
                 combined.update(names)
             k, f, r = row_metrics(scheme, parallel, batch['blank_type'], stock, context, rules)
             knives += k
-            finished += f
+            if rules.round == 'semi':
+                # Cap the yield numerator at each order's demand: over-production is
+                # free but earns no yield in the semi-final.  Credit only the part of
+                # this row that does not push the order past its demand mass.  (The
+                # preliminary round keeps its calibrated uncapped numerator.)
+                for oid, length in scheme.items():
+                    order = context.orders[oid]
+                    row_mass = length * parallel * order.linear_weight
+                    ceiling = _demand_numerator_mass(order)
+                    before = delivered_mass.get(oid, 0.0)
+                    finished += max(0.0, min(before + row_mass, ceiling) - min(before, ceiling))
+                    delivered_mass[oid] = before + row_mass
+            else:
+                finished += f
             raw += r
             rows += 1
             entries += len(scheme)

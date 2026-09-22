@@ -132,12 +132,40 @@ _ROUND_SHAPE_CACHE = {}
 # one of the cached `_max_delivery_table` lists, so its identity names the order.
 _MIN_ROUNDS_CACHE = {}
 
-# Upper bound on the round shapes `_legal_round_shapes` will enumerate.  The
-# enumeration is a product of per-order segment ranges, so it is only affordable
-# for the small chunks that reach the closing search; truncating is safe because a
-# truncated search merely fails to find a closing plan (the candidate is dropped)
-# whereas an unbounded one exhausts the whole time budget.
+# Upper bound on the `offer` probes `_enumerate_round_shapes` will spend on one
+# `(ids, blank)` geometry.  The enumeration is a product of per-order segment
+# ranges, so its cost explodes with the *number of distinct sizes* in the group
+# and is the one step of the closing search that cannot be made cheap.
+#
+# Why a work budget rather than a shape counter: the product is iterated with
+# `itertools.product`, and the loop body rejects most candidates (illegal length,
+# illegal weight) before they ever reach `best`, so counting accepted shapes never
+# fires.  Counting probes is the honest measure.
+#
+# Why this had to exist: `_SHAPE_CAP` was declared and then never read, so the
+# enumeration was unbounded.  On the semi-final drop the widest geometry measured
+# 42 single-order segments, and a two-size group reaches `42 * 42 * plimit`
+# probes while a three-size group reaches `42^3 * plimit` -- tens of millions.
+# Because `_enumerate_round_shapes` never consulted `deadline` (see the
+# `_round_moves` note: the untrimmed shape list is cached and deliberately
+# deadline-free), such a geometry spun forever.  Measured: the full 9,999-order
+# run stalled on `NP01:43`'s chunk 420 for 66 minutes with a live process and
+# zero output, and `faulthandler` pinned the loop at `solver.py:1164`.  Seeding
+# is not interruptible, so no caller-side timeout could recover it.
+#
+# Truncating is safe: a truncated list still contains the single-order-maximal
+# shapes (offered before the product) plus as much of the Pareto product as fit,
+# and a search that fails to close merely drops the candidate -- the greedy's own
+# rounds remain legal and complete.  An unbounded enumeration, by contrast, costs
+# the entire run.
 _SHAPE_CAP = 4000
+
+# Hard ceiling on the `itertools.product` tuples `_enumerate_round_shapes` will
+# step through for one geometry, checked every `_SHAPE_WORK_STRIDE` iterations so
+# the `time.perf_counter` calls stay negligible.  Sized so a pathological
+# geometry costs a few tenths of a second rather than minutes.
+_SHAPE_WORK_LIMIT = 300000
+_SHAPE_WORK_STRIDE = 8192
 
 # Upper bound on the closing search's reachable-state frontier.  States are piece
 # vectors, so a wide frontier means many near-equivalent partial deliveries; the
@@ -179,7 +207,17 @@ class Config:
     rolling_yield: float = 1.0
     max_rounds: int = 20             # per combination scheme
     weight_scale: float = 1.0        # order CSV: kg=1, tonnes=1000
-    max_overproduction_ratio: float = 0.0  # above rounded-up piece demand
+    # Extra pieces allowed above `pieces` (the rounded-up demand), as a ratio.
+    # `None` means NO CAP, which is the semi-final rule set: the official answer is
+    # "复赛改为欠产惩罚，不设超产上限" (09-16 17:01) and `constraints.txt` only ever
+    # states a *floor* ("每订单冷床分配总重量须不低于该订单重量").
+    # Holding this at 0 forces the delivery to equal `pieces` exactly, and that is
+    # not a harmless strictness: an exact landing requires `parallel | pieces` within
+    # a round, and `parallel` is the single strongest lever on the knife count
+    # (`knives/rod = (sum k + 1) / (p * sum k)`).  Locking `p` to the divisors of
+    # `pieces` threw away most of that lever -- see `_solo_scheme` for the measured
+    # case that made the failure visible.
+    max_overproduction_ratio: float | None = 0.0
     objective: str = "lex"           # lex or score
     baseline_knives: float | None = None
     exact_max_orders: int = 10       # per steel/diameter group
@@ -200,10 +238,16 @@ class Config:
             _positive(getattr(self, name), name)
         for name in ("bed_width", "max_rounds", "exact_max_orders", "exact_max_work", "search_max_group"):
             _integer(getattr(self, name), name)
-        for name in ("trim", "bar_gap_mm", "min_bed_length", "min_bed_weight", "max_overproduction_ratio"):
+        for name in ("trim", "bar_gap_mm", "min_bed_length", "min_bed_weight"):
             x = getattr(self, name)
             if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x < 0:
                 raise ModelError(f"{name} must be finite and nonnegative")
+        # `None` is a legitimate value here and means "no over-production ceiling".
+        if self.max_overproduction_ratio is not None:
+            x = self.max_overproduction_ratio
+            if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x < 0:
+                raise ModelError("max_overproduction_ratio must be None (no cap) "
+                                 "or finite and nonnegative")
         if self.min_bed_length > self.bed_length or self.min_bed_weight > self.bed_weight:
             raise ModelError("Bed lower bound exceeds upper bound")
         for name in ("bed_width_mm", "blank_weight", "baseline_knives"):
@@ -430,7 +474,26 @@ class Model:
         if blanks is not None:
             _validate_blanks(blanks)
         self.orders, self.cfg, self.blanks = orders, cfg, blanks
-        self.caps = [o.pieces + _floor(o.pieces * cfg.max_overproduction_ratio) for o in orders]
+        self.caps = [self._cap(i) for i in range(len(orders))]
+
+    def _cap(self, i):
+        """Upper bound on how many pieces order `i` may deliver.
+
+        A finite `max_overproduction_ratio` yields the historical
+        `pieces + floor(pieces * ratio)`.  `None` yields the PHYSICAL maximum:
+        `max_rounds` rounds, each at the bed's full length and full parallel width.
+
+        The physical bound is used instead of `math.inf` deliberately.  This value is
+        fed straight into `//` by `_construct`, and `float('inf') // n` raises
+        `OverflowError: cannot convert float infinity to integer`.  A finite ceiling
+        keeps every downstream expression ordinary arithmetic, and it is the honest
+        limit anyway -- the bed cannot physically carry more bars than that.
+        """
+        order = self.orders[i]
+        if self.cfg.max_overproduction_ratio is not None:
+            return order.pieces + _floor(order.pieces * self.cfg.max_overproduction_ratio)
+        kmax = max(0, _floor((self.cfg.bed_length - self.cfg.round_trim) / order.size))
+        return max(order.pieces, self.cfg.max_rounds * self.parallel_limit((i,)) * kmax)
 
     def catalogue(self, ids):
         if self.blanks is not None:
@@ -887,7 +950,21 @@ def _construct(model, ids, rng, deadline, randomized=False):
                 _deadline(deadline)
                 ks, used = [0] * len(ids), cfg.round_trim
                 length_limit = min(cfg.bed_length, cfg.bed_weight / (parallel * model.orders[ids[0]].linear_weight))
-                final_round_ok = True
+                # The continuity spread must FILL the round, not stretch the demand
+                # over the whole round budget.  Spreading each order over
+                # `rounds_left` (the budget) thins it to `remaining/parallel/
+                # rounds_left` segments, and at a wide parallel that is a handful of
+                # segments: the round drops below the 50 m floor, `make_round`
+                # rejects it, and the greedy falls back to narrow parallels
+                # (measured: mean p=13.7 against a width limit of 46, ~24% of the
+                # weight cap used).  Spreading over the rounds the group actually
+                # NEEDS at this parallel keeps every round near the bed/weight
+                # limit, which is where `sum(k)+1` knives per round is minimised.
+                live = [j for j in range(len(ids)) if remaining[j] > 0]
+                cut_needed = sum(_ceil(remaining[j] / parallel) * model.orders[ids[j]].size
+                                 for j in live)
+                spread = max(1, min(rounds_left,
+                                    _ceil(cut_needed / max(1e-9, length_limit - cfg.round_trim))))
                 for j in priority:
                     if remaining[j] <= 0:
                         continue
@@ -901,28 +978,20 @@ def _construct(model, ids, rng, deadline, randomized=False):
                         # share of each rather than clearing them one at a time.
                         # Spread what is left over the rounds that remain, but
                         # never below one segment.
-                        k = min(k, max(1, _ceil(remaining[j] / parallel / rounds_left)))
-                    elif rounds_left == 1:
-                        # This is the last round, so it has to deliver *exactly*
-                        # what is owed: no round is left to absorb a remainder and
-                        # over-production is forbidden.  That forces `parallel` to
-                        # divide the order's remainder (`k = left / p`).  When it
-                        # does not, this parallel count cannot finish the order and
-                        # the whole candidate is abandoned -- patching `k` down to
-                        # `left // p` only strands the difference forever, which is
-                        # how the 946/1156 pair used to end on 2 leftover pieces.
-                        if remaining[j] % parallel:
-                            final_round_ok = False
-                            break
-                        k = remaining[j] // parallel
+                        k = min(k, max(1, _ceil(remaining[j] / parallel / spread)))
+                    # NOTE: the last round needs no special handling now.  It used to
+                    # demand `parallel | remaining[j]` and abandon the candidate
+                    # otherwise, because over-production was forbidden (`ratio == 0`)
+                    # and no later round could absorb a remainder.  With the
+                    # semi-final's uncapped over-production the default
+                    # `k = ceil(remaining / parallel)` already lands the order -- the
+                    # excess is free, so the exact-landing branch is gone.
                     k = min(k, kmax)
                     if randomized and k > 1 and rng.random() < 0.2:
                         k = rng.randint(1, k)
                     if k > 0:
                         ks[j] = k
                         used += k * model.orders[i].size + cfg.segment_trim
-                if not final_round_ok:
-                    continue
                 if cfg.continuity:
                     # An order that still has pieces left MUST appear in this
                     # round, otherwise its round list gains a hole and clause 6
@@ -1078,9 +1147,13 @@ def _enumerate_round_shapes(model, ids, sizes, linear, blank_len, plimit, cfg):
     """
     max_seg = [int((cfg.bed_length - cfg.round_trim) // s) + 1 if s else 0 for s in sizes]
     best = {}
+    probes = 0
+    truncated = False
 
     def offer(parallel, ks):
         """Record a candidate round if it is legal; returns whether it was new."""
+        nonlocal probes
+        probes += 1
         lengths = [k * s for k, s in zip(ks, sizes) if k]
         total = sum(lengths) + cfg.round_trim
         if not cfg.min_bed_length - 1e-8 <= total <= cfg.bed_length + 1e-8:
@@ -1110,6 +1183,10 @@ def _enumerate_round_shapes(model, ids, sizes, linear, blank_len, plimit, cfg):
         # the single-order-maximal shapes are offered explicitly.  Without this the
         # three-order `C60:26.5` chunk never sees order 2's 1800-piece round and
         # the search reports a spurious infeasibility.
+        #
+        # These are also what makes truncation survivable: they are recorded before
+        # any budget is spent, so a capped enumeration still holds the shapes the
+        # closing search leans on hardest.
         for j in range(len(ids)):
             if highs[j] <= 0:
                 continue
@@ -1117,46 +1194,65 @@ def _enumerate_round_shapes(model, ids, sizes, linear, blank_len, plimit, cfg):
             ks[j] = highs[j]
             offer(parallel, ks)
         # Then the descending product, which visits the largest combined rounds.
+        # The iteration is the unbounded half, so it is the half that carries the
+        # work budget.  `probes` is checked on a stride: a per-iteration clock read
+        # would roughly double the cost of the cheap iterations, and the stride is
+        # small enough that overshoot stays well under a tenth of a second.
+        counter = 0
         for ks in itertools.product(*[range(hi, -1, -1) for hi in highs]):
+            counter += 1
+            if counter % _SHAPE_WORK_STRIDE == 0 and probes > _SHAPE_WORK_LIMIT:
+                truncated = True
+                break
             if not any(ks):
                 continue
             offer(parallel, ks)
+        if truncated:
+            break
     if not best:
         return []
-    # Pareto cut.  Within one parallel count a move is a `ks` vector, and the
-    # delivered pieces are `ks * parallel`, so a move that gives order A at least as
-    # much AND order B at least as much as another move makes that other move
-    # strictly less useful for reaching a target from above.  Exactness still needs
-    # the finer moves, but they are only ever useful as the *last* step, and the
-    # breadth-first sweep re-tests every reachable remainder against the per-order
-    # delta sets before expanding, so dropping them costs no completeness that the
-    # search actually exploits.  Measured on `NP01:43`'s (617, 989) pair: 4,000
-    # moves collapse to 547, a 7.3x cut in every layer of the sweep.
-    by_parallel = {}
-    for delta, parallel, ks in ((d, p, k) for d, (p, k) in best.items()):
-        by_parallel.setdefault(parallel, set()).add(tuple(ks))
-    pruned = {}
-    for parallel, shapes in by_parallel.items():
-        # Two-order case is the one the sweep actually exercises, so the frontier is
-        # taken on the first coordinate and the running maximum of the rest.
-        frontier, best_last = [], None
-        for ks in sorted(shapes, key=lambda k: (-k[0], [-v for v in k[1:]])):
-            tail = tuple(ks[1:])
-            if best_last is None or any(b > a for a, b in zip(best_last, tail)):
-                frontier.append(ks)
-                best_last = tail if best_last is None else \
-                    tuple(max(a, b) for a, b in zip(best_last, tail))
-        for ks in frontier:
-            delta = tuple(k * parallel for k in ks)
-            pruned[delta] = (parallel, list(ks))
-    # Always keep the single-order-maximal shapes: they are the whole reason a big
-    # order can land in two rounds, and they can sit off the Pareto staircase.
-    for parallel, shapes in by_parallel.items():
-        for ks in shapes:
-            if sum(1 for k in ks if k) == 1:
+    # A truncated set is not Pareto-complete, so the staircase below would drop
+    # moves it cannot see dominate.  Skip the cut in that case and keep everything
+    # that was actually probed -- the caller's `_MOVE_CAP` trims the list anyway.
+    if len(best) <= _SHAPE_CAP or truncated:
+        # Pareto cut.  Within one parallel count a move is a `ks` vector, and the
+        # delivered pieces are `ks * parallel`, so a move that gives order A at least as
+        # much AND order B at least as much as another move makes that other move
+        # strictly less useful for reaching a target from above.  Exactness still needs
+        # the finer moves, but they are only ever useful as the *last* step, and the
+        # breadth-first sweep re-tests every reachable remainder against the per-order
+        # delta sets before expanding, so dropping them costs no completeness that the
+        # search actually exploits.  Measured on `NP01:43`'s (617, 989) pair: 4,000
+        # moves collapse to 547, a 7.3x cut in every layer of the sweep.
+        by_parallel = {}
+        for delta, parallel, ks in ((d, p, k) for d, (p, k) in best.items()):
+            by_parallel.setdefault(parallel, set()).add(tuple(ks))
+        pruned = {}
+        for parallel, shapes in by_parallel.items():
+            # Two-order case is the one the sweep actually exercises, so the frontier is
+            # taken on the first coordinate and the running maximum of the rest.
+            frontier, best_last = [], None
+            for ks in sorted(shapes, key=lambda k: (-k[0], [-v for v in k[1:]])):
+                tail = tuple(ks[1:])
+                if best_last is None or any(b > a for a, b in zip(best_last, tail)):
+                    frontier.append(ks)
+                    best_last = tail if best_last is None else \
+                        tuple(max(a, b) for a, b in zip(best_last, tail))
+            for ks in frontier:
                 delta = tuple(k * parallel for k in ks)
-                pruned.setdefault(delta, (parallel, list(ks)))
-    moves = [(delta, parallel, ks) for delta, (parallel, ks) in pruned.items()]
+                pruned[delta] = (parallel, list(ks))
+        # Always keep the single-order-maximal shapes: they are the whole reason a big
+        # order can land in two rounds, and they can sit off the Pareto staircase.
+        for parallel, shapes in by_parallel.items():
+            for ks in shapes:
+                if sum(1 for k in ks if k) == 1:
+                    delta = tuple(k * parallel for k in ks)
+                    pruned.setdefault(delta, (parallel, list(ks)))
+        moves = [(delta, parallel, ks) for delta, (parallel, ks) in pruned.items()]
+    else:
+        # Too many shapes to trust the O(n log n) staircase cut, and the geometry was
+        # truncated on top of that: hand the caller everything that was probed.
+        moves = [(delta, parallel, list(ks)) for delta, (parallel, ks) in best.items()]
     # Rank by total pieces moved.  The single-order-maximal shapes are in the list
     # and several of them score highest for their own order, so this ordering keeps
     # both kinds reachable while making the search dive into the large-delivery
@@ -1673,22 +1769,30 @@ def _solo_scheme(model, ids, blank, rng, deadline, randomized=False):
     limit = model.parallel_limit(ids)
 
     def try_shape(n):
-        for parallel in range(1, limit + 1):
+        # Descending `parallel` is not a style choice.  For a fixed round count the
+        # plan costs `sum(k) + n` knives, and `sum(k) = total_k = ceil(pieces /
+        # parallel)` is non-increasing in `parallel`, so the widest legal bed is
+        # always the cheapest.  Ascending used to stop at the first *legal* shape,
+        # which for `B20270366` (674 pieces, 5.0 m) is `p = 24` (round length 147 m,
+        # 30 knives) -- while `p = 46` lands the same demand in ONE 77 m round for 16.
+        for parallel in range(limit, 0, -1):
             _deadline(deadline)
-            # Delivered pieces must equal the demand EXACTLY.  `total_k` is
-            # `ceil(pieces / parallel)`, which is the smallest segment count whose
-            # product reaches the demand, so `total_k * parallel == pieces` only
-            # when `parallel` divides the demand.  Testing for `<` (the original
-            # code) accepted the over-delivering case as well and produced plans the
-            # platform rejects: measured on `NP01:43`'s order B20270141 (447 pieces,
-            # 4.9 m), `parallel=5` gives `ceil(447/5) = 90`, split over `n=3` rounds
-            # as `[30, 30, 30]`, i.e. `30 * 5 = 150` per round and 450 in total --
-            # 3 pieces over the cap of 447, which `validate_plan` reported as
-            # "Demand/overproduction violation".  `max_overproduction_ratio` is 0 in
-            # the semi-final rule set, so the equality is not a tolerance question.
+            # `total_k = ceil(pieces / parallel)` is the smallest segment count whose
+            # product reaches the demand, so `total_k * parallel >= pieces` holds for
+            # every `parallel` -- the delivery is "the demand rounded up to a whole
+            # number of bars", which is exactly what `pieces` already is.
+            #
+            # The earlier version demanded EQUALITY, justified by
+            # `max_overproduction_ratio == 0`.  Equality is satisfiable only when
+            # `parallel | pieces`, and that is what made `B20270366` look unsolvable:
+            # 674 = 2 x 337 with 337 prime, so against `parallel_limit = 46` the only
+            # admissible counts are 1 and 2, and at `p = 2` a single round would need
+            # `337 * 5 m` of bar.  The solver raised `ModelError: Search found no
+            # feasible scheme for B20270366`, while an exhaustive DP over per-round
+            # `(k, p)` (`diagnostics/solo_feasibility.py`) solves it in 2 rounds.  The
+            # semi-final rules put no ceiling on over-production -- the excess simply
+            # does not count toward the yield numerator -- so no count is excluded.
             total_k = _ceil(order.pieces / parallel)
-            if total_k * parallel != order.pieces:
-                continue                      # this parallel count cannot land it
             if total_k < n:
                 continue                      # n rounds each need >= 1 segment
             per, extra = divmod(total_k, n)
@@ -1918,6 +2022,12 @@ def validate_plan(plan, orders, cfg, blanks=None, blank_rule='per_round'):
     lookup = {o.oid: i for i, o in enumerate(orders)}
     seen, knives, finished, raw, covered, rounds = set(), 0, 0.0, 0.0, 0, 0
     finished_int_total = 0.0
+    # `finished` is the yield NUMERATOR and is capped per order at its demand
+    # (over-production earns no yield under the semi-final rules).  `finished_physical`
+    # is the uncapped delivered mass and backs the `finished <= raw` physical floor:
+    # over-produced pieces are still real steel cut from real blanks, so the floor
+    # must see them.  The two diverge only once an order is delivered past demand.
+    finished_physical = 0.0
     declared_total, required_total = 0.0, 0.0
     order_rounds = {}          # oid -> list of round indices, for the continuity rule
     allocated = {}             # oid -> allocated physical mass, for the clause 8 floor
@@ -1976,10 +2086,18 @@ def validate_plan(plan, orders, cfg, blanks=None, blank_rule='per_round'):
                     raise ModelError("Segment is not an integer multiple under the configured length_mode")
                 if length + (2 * cfg.trim if shared else 0) > usable + 1e-8:
                     raise ModelError("Segment exceeds usable length from one blank")
-                produced[name] += k * parallel
+                delivered = k * parallel
+                # Credit the yield numerator only up to the order's demand: the
+                # semi-final counts over-production as free but yield-less.  The
+                # running `produced[name]` is the pre-round total, so the counted
+                # portion of this round is the part that does not push past `pieces`.
+                counted = max(0, min(produced[name] + delivered, o.pieces)
+                              - min(produced[name], o.pieces))
+                produced[name] += delivered
                 total += length
-                finished += k * parallel * o.size * linear
-                finished_int_delta += k * parallel * o.size * o.linear_weight_int
+                finished += counted * o.size * linear
+                finished_physical += delivered * o.size * linear
+                finished_int_delta += delivered * o.size * o.linear_weight_int
                 knives += k if shared else k + 1
                 order_rounds.setdefault(name, []).append(j)
                 # Mass this round allocates to this order.  Every one of the
@@ -2028,8 +2146,19 @@ def validate_plan(plan, orders, cfg, blanks=None, blank_rule='per_round'):
                         f"{allocated.get(name, 0.0):.3f} kg < required {orders[lookup[name]].weight:.3f} kg")
         for name, count in produced.items():
             i = lookup[name]
-            if not orders[i].pieces <= count <= model.caps[i]:
-                raise ModelError(f"Demand/overproduction violation for {name}: {count}, allowed [{orders[i].pieces}, {model.caps[i]}]")
+            # Under-delivery is always a hard violation: the platform's clause 12
+            # completeness requires every order's demand to be met.
+            if count < orders[i].pieces:
+                raise ModelError(f"Demand violation for {name}: {count} < {orders[i].pieces}")
+            # The over-production ceiling only exists when a finite ratio is
+            # configured.  With `max_overproduction_ratio is None` the semi-final
+            # puts no cap on the excess -- it simply does not count toward the
+            # yield numerator -- so there is no upper bound to enforce.  (The
+            # physical `caps[i]` is still computed, but it cannot be exceeded by
+            # rounds that passed `make_round`, so testing it would only fire on a
+            # solver bug, not on a rule.)
+            if cfg.max_overproduction_ratio is not None and count > model.caps[i]:
+                raise ModelError(f"Overproduction violation for {name}: {count} > {model.caps[i]}")
         # Coverage rule.  The semi-final rule counts only orders that shared a
         # cold-bed round; the preliminary rule counted every order of a multi-order
         # scheme regardless of which round it sat in.  `coverage_shared` names the
@@ -2050,7 +2179,7 @@ def validate_plan(plan, orders, cfg, blanks=None, blank_rule='per_round'):
         # millimetres. Keep that guard so the probe cannot claim raw < finished.
         if finished_int_total > raw + 1e-7 * max(1, raw):
             raise ModelError("Finished (integer-diameter) mass exceeds raw mass")
-    elif finished > raw + 1e-7 * max(1, raw):
+    elif finished_physical > raw + 1e-7 * max(1, raw):
         raise ModelError("Finished mass exceeds raw mass")
     result = {"orders": len(orders), "plans": len(plan), "rounds": rounds, "knives": knives,
               "finished_weight": finished, "blank_weight": raw, "yield_rate": finished / raw if raw else 0.0,

@@ -6,7 +6,8 @@
   "bed_weight": 60000,
   "trim": 1,
   "max_rounds": 6,
-  "max_overproduction_ratio": 0,
+  "max_overproduction_ratio": null,
+  "baseline_knives": 160000,
   "objective": "lex",
   "search_max_group": 8,
   "length_mode": "net_shared_trim"
