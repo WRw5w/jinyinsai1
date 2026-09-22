@@ -2185,6 +2185,16 @@ def validate_plan(plan, orders, cfg, blanks=None, blank_rule='per_round'):
               "finished_weight": finished, "blank_weight": raw, "yield_rate": finished / raw if raw else 0.0,
               "coverage": covered / len(orders) if orders else 0.0, "objective": cfg.objective,
               "length_mode": cfg.length_mode}
+    # Both masses are reported, because they answer different questions and are no
+    # longer interchangeable.  `finished_weight` is the yield NUMERATOR, capped per
+    # order at its demand -- that is the scored quantity.  `finished_physical_weight`
+    # is what the plan actually cuts; it exceeds the capped value once any order is
+    # delivered past demand, which the semi-final rules permit (no over-production
+    # cap).  Callers describing over-production must use the physical figure:
+    # differencing the capped one against demand is identically zero by
+    # construction, which is how `build_submission`'s note came to claim
+    # "additional output -0.000 kg" while 9550 orders carried extra pieces.
+    result["finished_physical_weight"] = finished_physical
     if cfg.objective == 'platform_score':
         result['platform_score_estimate'] = -_key((knives,finished,raw,covered),cfg,len(orders))[0]
     elif cfg.baseline_knives is not None:

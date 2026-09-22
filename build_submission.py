@@ -136,12 +136,18 @@ def build(args):
             for oid, length in lengths.items():
                 delivered[oid] += round(length / lookup[oid].size) * parallel
     demand_mass = sum(o.pieces * o.size * o.linear_weight for o in orders)
+    # The over-production mass must come from the UNCAPPED physical total.  The
+    # yield numerator (`finished_weight`) is capped per order at its demand under
+    # the semi-final rules, so differencing it against demand is identically zero
+    # and silently reported "additional output -0.000 kg" next to "9550 orders with
+    # extra pieces".  `finished_physical_weight` is what the plan actually cuts.
+    physical_mass = after.get('finished_physical_weight', after['finished_weight'])
     production = dict(per_order_extra_limit=cfg.max_overproduction_ratio,
                       orders_with_extra_pieces=sum(delivered[o.oid] > o.pieces for o in orders),
                       max_actual_extra_ratio=max(delivered[o.oid] / o.pieces - 1 for o in orders),
                       rounded_demand_kg=demand_mass,
-                      extra_kg=after['finished_weight'] - demand_mass,
-                      mass_weighted_extra_ratio=after['finished_weight'] / demand_mass - 1)
+                      extra_kg=physical_mass - demand_mass,
+                      mass_weighted_extra_ratio=physical_mass / demand_mass - 1)
     report = dict(package_created=True, official_acceptance_verified=False,
                   complete_original_order_coverage=not audit.get('rejected'),
                   input_result=str(Path(args.input).resolve()),
@@ -164,27 +170,87 @@ def build(args):
                          + (['semi: <=6 rounds per scheme', 'semi: adjacent rounds per order',
                              'semi: per-order allocated mass >= order weight'] if round_name == 'semi' else []))
     atomic_json(output / 'validation_report.json', report)
+    # The note is assembled from the round's own facts rather than a fixed
+    # template.  The earlier version hardcoded the preliminary round throughout:
+    # it named prelim's rejected order (`A20260949`, a negative cut length), cited
+    # prelim's seven calibration feedbacks, and printed a 90000 knife baseline.
+    # Every one of those is wrong for the semi-final round, and the baseline in
+    # particular changes the score the note claims.  It also crashed outright once
+    # `max_overproduction_ratio` became `None` (the semi-final rule set caps
+    # nothing), because the sentence applied a `:.2%` format to it.
+    semi = round_name == 'semi'
+    baseline = 160000 if semi else 90000
+    rejected = (audit.get('rejected') or [None])[0]
+    if rejected is None:
+        isolated = '本次审计没有隔离任何订单，全部原始订单都进入了方案。'
+    else:
+        original = rejected.get('original') or {}
+        shown = original.get('订单号', rejected.get('order_id'))
+        detail = '、'.join(f'{k}={v}' for k, v in original.items() if k != '订单号')
+        isolated = (f"原始订单 {shown} 的原始记录为 {detail}，原因 {rejected.get('reason')}，"
+                    f"无法用于物理可行的锯切。本包按题面允许的异常数据过滤流程隔离该订单，"
+                    f"没有猜测其正确取值，没有添加虚构订单方案。原始文件未改动。")
+    if cfg.max_overproduction_ratio is None:
+        overproduction = (
+            f"超产口径：不设上限。题目对该轮只给出下界（每订单冷床分配总重量须不低于该订单重量），"
+            f"没有超产上限，超产既不扣分也不计入成材率分子。实际有 "
+            f"{production['orders_with_extra_pieces']} 单额外交付，单单最大比例 "
+            f"{production['max_actual_extra_ratio']:.4%}，按重量汇总额外产量 "
+            f"{production['extra_kg']:.3f} kg（{production['mass_weighted_extra_ratio']:.4%}）。")
+    else:
+        overproduction = (
+            f"超产口径：以每单向上取整的需求支数为基准，额外支数不超过需求支数的 "
+            f"{cfg.max_overproduction_ratio:.2%}（向下取整）；实际有 "
+            f"{production['orders_with_extra_pieces']} 单额外交付，单单最大比例 "
+            f"{production['max_actual_extra_ratio']:.4%}，按重量汇总额外产量 "
+            f"{production['extra_kg']:.3f} kg（{production['mass_weighted_extra_ratio']:.4%}）。")
+    if semi:
+        knife_model = (
+            "评分预测按复赛口径计刀：每轮的刀数等于该轮总段数加一（连接处各一刀、每轮冷床一组头尾），"
+            "不乘棒材根数；并按截成整数毫米的直径计算成材质量。物理可行性仍按原始小数直径保守校验。"
+            f"总分使用 40/30/20/10 权重与 {baseline} 基准刀数。")
+        calibration = (
+            "复赛没有官方反馈可用于校准：本轮的刀数与覆盖率口径依 constraints.txt 与 PDF 六/九实现，"
+            "尚未经任何官方实测验证。历史校准只在初赛轮成立，不能外推到这里。")
+        upload_hint = (
+            "本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。"
+            "若官方校验要求原始 10000 个订单号全部出现，需先取得上述被隔离订单的官方异常过滤口径；"
+            "不能用凭空补值来保证通过。本脚本没有执行网页上传。")
+    else:
+        knife_model = (
+            "评分预测按每个订单段 `int(length // size) + 1` 计刀数，并按截成整数毫米的直径计算成材质量；"
+            f"物理可行性仍按原始小数直径保守校验。总分使用 40/30/20/10 权重、推测的 {baseline} 基准刀数"
+            "与时间满分。validation_report.json 的 before/after 保留旧物理模型统计用于审计，其中旧 "
+            "platform_score_estimate 已失准；请使用 calibrated_prediction，不能再按旧估分选提交。")
+        calibration = (
+            "七个历史官方校准点的刀数（及展示成材率）均已复现，不代表已取得评分器源码或穷尽全部规则。")
+        upload_hint = (
+            "本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。"
+            "若官方校验要求原始 5000 个订单号全部出现，必须先取得上述被隔离订单的正确值或官方异常过滤口径；"
+            "不能用凭空补值来保证通过。本脚本没有执行网页上传。")
     note = f'''# 提交候选包说明
 
 上传文件：{zip_path.name}，压缩包根目录仅包含同名 JSON。
 
-有效订单：{len(orders)} / {audit['source_orders']}。原始订单 A20260949 的定尺为 -1100 mm，无法用于物理可行的锯切。本包按题面允许的异常数据过滤流程隔离该订单，没有猜测其正确定尺，没有添加虚构订单方案。原始文件未改动。
+轮次：{'复赛' if semi else '初赛'}。
 
-按七个官方校准点复现的预测刀数：{prediction['knives']}；预测成材率：{prediction['yield_rate']:.8%}；组合覆盖率：{prediction['coverage']:.8%}（分母为有效订单数）；按原始全部订单计的组合覆盖率：{report['combination_coverage_over_source']:.8%}。
+有效订单：{len(orders)} / {audit['source_orders']}。{isolated}
 
-预测总分：刀数子分封顶假设下 {prediction['score_capped']:.6f}；不封顶假设下 {prediction['score_uncapped']:.6f}。新包仍需官方实测。七个历史官方校准点的刀数（及展示成材率）均已复现，不代表已取得评分器源码或穷尽全部规则。
+预测刀数：{prediction['knives']}；预测成材率：{prediction['yield_rate']:.8%}；组合覆盖率：{prediction['coverage']:.8%}（分母为有效订单数）；按原始全部订单计的组合覆盖率：{report['combination_coverage_over_source']:.8%}。
+
+预测总分：刀数子分封顶假设下 {prediction['score_capped']:.6f}；不封顶假设下 {prediction['score_uncapped']:.6f}。新包仍需官方实测。{calibration}
 
 输入方案：{Path(args.input).resolve()}。length_scheme 只写净定尺整数倍，整轮统一加 2m 余量计算长度和承重。本打包步骤只合并同钢种、同直径、同坯型的方案，保留每轮参数。每个新方案最多 {cfg.max_rounds} 轮，符合当前模型上限。详见 validation_report.json。
 
-超产口径：以每单向上取整的需求支数为基准，额外支数不超过需求支数的 {cfg.max_overproduction_ratio:.2%}（向下取整）；实际有 {production['orders_with_extra_pieces']} 单额外交付，单单最大比例 {production['max_actual_extra_ratio']:.4%}，按重量汇总额外产量 {production['extra_kg']:.3f} kg（{production['mass_weighted_extra_ratio']:.4%}）。题面四条设备约束未列出超产上限，此上限为求解设置，尚未获官方单独确认。
+{overproduction}
 
-评分预测按每个订单段 `int(length // size) + 1` 计刀数，并按截成整数毫米的直径计算成材质量；物理可行性仍按原始小数直径保守校验。总分使用 40/30/20/10 权重、推测的90000基准刀数与时间满分。validation_report.json 的 before/after 保留旧物理模型统计用于审计，其中旧 platform_score_estimate 已失准；请使用 calibrated_prediction，不能再按旧估分选提交。
+{knife_model}
 
-独立校验器直接读取原始 CSV 和提交 JSON：整数倍、含余量的长度/承重、宽度、交付数量及物料检查均通过。已复现旧包 11315 条整数倍错误与 44 条长度错误；重量采用比反馈数量更保守的检查，不声称已拿到官方评分器源码。
+独立校验器直接读取原始 CSV 和提交 JSON：整数倍、含余量的长度/承重、宽度、交付数量及物料检查均通过。重量采用比反馈数量更保守的检查，不声称已拿到官方评分器源码。
 
-本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。若官方校验要求原始 5000 个订单号全部出现，必须先取得 A20260949 的正确值或官方异常过滤口径；不能用凭空补值来保证通过。本脚本没有执行网页上传。
+{upload_hint}
 
-若需按队名重新打包，请在原打包命令中添加 `--team 实际队名`，同时保留原 --input、--config、--audit、--output-dir 参数，避免误选旧方案。
+若需按队名重新打包，请在原打包命令中添加 `--team 实际队名`，同时保留原 --input、--config、--audit、--data、--round、--output-dir 参数，避免误选旧方案。
 '''
     if args.extra_note:
         note += '\n' + Path(args.extra_note).read_text(encoding='utf-8').rstrip() + '\n'
@@ -198,16 +264,27 @@ def build(args):
 
 def parser():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('--input', default='runs/platform_fix/result.json')
-    ap.add_argument('--orders', default='data/orders.normalized.csv')
-    ap.add_argument('--blanks', default='data/blanks.normalized.csv')
-    ap.add_argument('--config', default='data/competition.config.json')
-    ap.add_argument('--audit', default='data/data_audit.json')
+    # Every round-dependent path defaults to None and is filled in by
+    # `resolve_round_paths` once `--round` is known.  Previously they were
+    # hardcoded to the preliminary round's files while `--round` only switched the
+    # validator and the package name -- so `--round semi` alone would read
+    # prelim's orders, blanks, config and audit, validate them under semi rules,
+    # and emit a plausible-looking package built from the wrong dataset.  The
+    # inputs are hash-pinned in validation_report.json, so the mistake was
+    # auditable after the fact, but nothing surfaced it at build time.  Deriving
+    # the defaults from the round makes the two impossible to disagree.
+    ap.add_argument('--input', default=None,
+                    help='the solved plan to package (required)')
+    ap.add_argument('--orders', default=None)
+    ap.add_argument('--blanks', default=None)
+    ap.add_argument('--config', default=None)
+    ap.add_argument('--audit', default=None)
     ap.add_argument('--team', default='棒材优化')
     ap.add_argument('--output-dir', default='submission_fixed')
     ap.add_argument('--round', default='prelim', choices=['prelim', 'semi'],
-                    help='rule set used for validation and scoring; semi also renames the package')
-    ap.add_argument('--data', default='data',
+                    help='rule set used for validation, scoring and the data defaults; '
+                         'semi also renames the package')
+    ap.add_argument('--data', default=None,
                     help='directory holding the raw CSVs the independent checker reads')
     ap.add_argument('--weight-mode', default='strict',
                     choices=['strict', 'aggregate', 'aggregate_no_trim', 'finished_floor'],
@@ -217,5 +294,29 @@ def parser():
     return ap
 
 
+def resolve_round_paths(args):
+    """Fill the round-dependent paths that the caller left unset.
+
+    `--round semi` selects `data/semi/` for every input, so a semi build cannot
+    silently consume the preliminary dataset.  A path the caller passed
+    explicitly is never overridden -- the point is to fix the *defaults*, not to
+    guess the operator's intent.
+    """
+    root = 'data/semi' if args.round == 'semi' else 'data'
+    for name, leaf in (('orders', 'orders.normalized.csv'),
+                       ('blanks', 'blanks.normalized.csv'),
+                       ('config', 'competition.config.json'),
+                       ('audit', 'data_audit.json')):
+        if getattr(args, name) is None:
+            setattr(args, name, f'{root}/{leaf}')
+    if args.data is None:
+        args.data = root
+    if args.input is None:
+        raise SystemExit(
+            'error: --input is required (the solved plan to package). '
+            f'For the semi-final round a typical value is runs/semi_nolimit_v1/result.json')
+    return args
+
+
 if __name__ == '__main__':
-    build(parser().parse_args())
+    build(resolve_round_paths(parser().parse_args()))
