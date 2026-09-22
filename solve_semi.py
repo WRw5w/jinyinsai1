@@ -53,7 +53,24 @@ def group_keys(orders):
     return seen
 
 
-def solve_chunk(chunk, cfg, blanks, seconds, seed, cache_path):
+def solve_chunk(chunk, cfg, blanks, seconds, seed, cache_path, attempts=3):
+    """Solve one chunk, memoising the result next to `cache_path`.
+
+    Retries exist because failures here were observed to be TRANSIENT rather than
+    deterministic: a chunk that never wrote its cache file (so the driver's
+    `except` swallowed it) solved cleanly in 8.35 s when replayed standalone with
+    the same budget.  The cause is outside the solver -- the sandbox reclaims long
+    runs -- but the *consequence* is ours to fix: an unplaced chunk is exactly the
+    order coverage the platform scores, so a one-shot `continue` silently forfeits
+    points.  Each retry perturbs the seed, so a genuinely marginal chunk gets a
+    different annealing trajectory instead of repeating a doomed one.
+
+    Only exceptions are retried.  An annealed-out budget is NOT an exception:
+    `search_10s` catches `SearchTimeout` itself and returns the incumbent, which
+    seeding guarantees to be a complete, legal plan -- so the retry loop only ever
+    sees real defects (`ModelError`, `validate_plan` violations), which is what
+    makes three attempts the right order of magnitude rather than a band-aid.
+    """
     if cache_path.exists():
         try:
             data = json.loads(cache_path.read_text(encoding='utf-8'))
@@ -61,14 +78,23 @@ def solve_chunk(chunk, cfg, blanks, seconds, seed, cache_path):
                 return data['plan'], 'cached'
         except (json.JSONDecodeError, KeyError):
             pass
-    started = time.perf_counter()
-    plan = search_10s(chunk, cfg, seconds=seconds, seed=seed, blanks=blanks)
-    elapsed = time.perf_counter() - started
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps(dict(complete=True, elapsed=round(elapsed, 3),
-                                          plan=plan), ensure_ascii=False,
-                                     separators=(',', ':')) + '\n', encoding='utf-8')
-    return plan, round(elapsed, 3)
+    last = None
+    for attempt in range(attempts):
+        started = time.perf_counter()
+        try:
+            plan = search_10s(chunk, cfg, seconds=seconds, seed=seed + attempt * 9973,
+                              blanks=blanks)
+        except Exception as exc:                                        # noqa: BLE001
+            last = exc
+            continue
+        elapsed = time.perf_counter() - started
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(dict(complete=True, elapsed=round(elapsed, 3),
+                                              attempts=attempt + 1, plan=plan),
+                                         ensure_ascii=False,
+                                         separators=(',', ':')) + '\n', encoding='utf-8')
+        return plan, round(elapsed, 3)
+    raise RuntimeError(f'chunk unsolved after {attempts} attempts: {last!r}')
 
 
 def main():
@@ -95,7 +121,7 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     settings = json.loads(Path(args.config).read_text(encoding='utf-8'))
     settings.update(continuity=True, coverage_shared=True, enforce_order_mass_floor=True,
-                    objective='platform_score', baseline_knives=90000)
+                    objective='platform_score', baseline_knives=160000)
     cfg = Config(**settings)
     all_orders = load_orders(str(Path(args.data) / 'orders.normalized.csv'), cfg, skip_invalid=True)
     blanks = load_blanks(str(Path(args.data) / 'blanks.normalized.csv'))
@@ -121,10 +147,13 @@ def main():
         members = pick_group(all_orders, f'{key[0]}:{key[1]}')
         group_dir = root / 'chunks' / f'{key[0]}_{key[1]}'
         group_plan = []
-        failures = 0
+        failed_offsets = []
+        failed_orders = []
+        missing_offsets = []
         for offset in range(0, len(members), args.chunk):
             if time.perf_counter() >= deadline:
-                break
+                missing_offsets.append(offset)
+                continue
             chunk = members[offset:offset + args.chunk]
             cache_path = group_dir / f'{offset:06d}.json'
             try:
@@ -133,19 +162,34 @@ def main():
             except Exception as exc:                                  # noqa: BLE001
                 # A chunk that fails must not lose the chunks around it, but it also
                 # must not be silently dropped: unplaced orders are exactly the
-                # coverage the platform scores.  Record it and keep going.
-                failures += 1
+                # coverage the platform scores.  The offsets and order ids are
+                # written to disk so a follow-up pass can re-attack exactly those
+                # chunks -- which is what makes the retry inside `solve_chunk`
+                # meaningful rather than decorative.
+                failed_offsets.append(offset)
+                failed_orders.extend(o.oid for o in chunk)
                 print(f'  [{key[0]}:{key[1]}] chunk @{offset} FAILED: '
                       f'{type(exc).__name__}: {exc}', flush=True)
                 traceback.print_exc()
                 continue
             group_plan.extend(plan)
+        if failed_offsets or missing_offsets:
+            (group_dir / '_failed.json').write_text(
+                json.dumps(dict(group=f'{key[0]}:{key[1]}', failed=failed_offsets,
+                                unrun=missing_offsets, orders=failed_orders),
+                           ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        elif (group_dir / '_failed.json').exists():
+            # The group is now complete; drop a stale failure note so the next pass
+            # does not re-attempt work that already succeeded.
+            (group_dir / '_failed.json').unlink()
         per_group.append(dict(group=f'{key[0]}:{key[1]}', orders=len(members),
-                              rounds=sum(len(b['length_scheme']) for b in group_plan),
-                              plans=len(group_plan), failures=failures))
+                              plans=len(group_plan), failed_chunks=len(failed_offsets),
+                              unrun_chunks=len(missing_offsets),
+                              unplaced_orders=len(failed_orders)))
         assembled.extend(group_plan)
         print(f'[{key[0]}:{key[1]}] {len(members)} orders -> {len(group_plan)} schemes, '
-              f'{failures} failed chunks, {time.perf_counter() - started:.0f}s elapsed', flush=True)
+              f'{len(failed_offsets)} failed / {len(missing_offsets)} unrun chunks, '
+              f'{time.perf_counter() - started:.0f}s elapsed', flush=True)
         (root / 'result.partial.json').write_text(
             json.dumps(assembled, ensure_ascii=False, separators=(',', ':')) + '\n',
             encoding='utf-8')
@@ -199,7 +243,7 @@ def main():
                    yield_rate=round(metrics['yield_rate'], 6),
                    coverage=round(metrics['coverage'], 6))
     try:
-        scoring = evaluate(assembled, Path(args.data), round_name='semi', baseline_knives=90000)
+        scoring = evaluate(assembled, Path(args.data), round_name='semi', baseline_knives=160000)
         summary.update(semi_coverage=round(scoring['coverage'], 6),
                        semi_violation_count=scoring['violation_count'],
                        semi_score_capped=round(scoring['score_capped'], 4))

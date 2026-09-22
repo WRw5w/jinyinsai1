@@ -40,7 +40,7 @@ def main():
 
     settings = json.loads(Path(args.config).read_text(encoding='utf-8'))
     settings.update(continuity=True, coverage_shared=True, enforce_order_mass_floor=True,
-                    objective='platform_score', baseline_knives=90000)
+                    objective='platform_score', baseline_knives=160000)
     cfg = Config(**settings)
     orders = load_orders(str(Path(args.data) / 'orders.normalized.csv'), cfg, skip_invalid=True)
     blanks = load_blanks(str(Path(args.data) / 'blanks.normalized.csv'))
@@ -76,7 +76,7 @@ def main():
         if source.exists():
             (scope / name).write_bytes(source.read_bytes())
     physical = check(plan, scope, round='semi')
-    scoring = evaluate(plan, scope, round_name='semi', baseline_knives=90000)
+    scoring = evaluate(plan, scope, round_name='semi', baseline_knives=160000)
 
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)

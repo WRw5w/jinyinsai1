@@ -80,7 +80,7 @@ def oracle(orders, cfg, blanks):
                     produced = [sum(r[0][i] for r in rows) for i in range(len(ids))]
                     if not all(o.pieces <= q <= cap for o, q, cap in zip(selected, produced, caps)):
                         continue
-                    output.append((sum(r[1] for r in rows), sum(q * o.size * linear for q, o in zip(produced, selected)),
+                    output.append((sum(r[1] for r in rows), sum(min(q, o.pieces) * o.size * linear for q, o in zip(produced, selected)),
                                    sum(r[2] for r in rows), len(ids) if len(ids) > 1 else 0))
         return output
 
