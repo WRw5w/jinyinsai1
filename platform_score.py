@@ -293,14 +293,38 @@ def detect_violations(plan, context, rules):
             if rules.coverage_shared and len(scheme) > 1:
                 pass  # coverage is computed in evaluate(); sharing is the rule
     if rules.continuity:
-        for oid, places in order_rounds.items():
-            by_scheme = {}
-            for a, j in places:
-                by_scheme.setdefault(a, []).append(j)
-            for a, js in by_scheme.items():
-                js = sorted(js)
+        # CALIBRATED 2026-09-22 against the semi-final rejection notice.  The
+        # platform reported `跨轮接续不连续(7559条)` with the offending locations
+        # printed as `方案a批j` pairs -- i.e. one violation per *round boundary*,
+        # not per order.  On the rejected package (round_shaper: every order in
+        # every round, so every pair of adjacent rounds has the identical order
+        # set) this predicate reproduces 7559 exactly, including the non-
+        # forgeable detail that `方案1` skips 批3: 批3/批4 straddle a
+        # `merge_compatible` splice, where the two sides are different schemes
+        # and therefore have different order sets.
+        #
+        # The competing readings are excluded by the data:
+        #   * "an order's rounds must be adjacent" (per-order gap) counts
+        #     `sum(m_s * (R_s - 1))` on that package, an order of magnitude more;
+        #   * "adjacent rounds must be disjoint" is impossible -- 28.6% of the
+        #     semi orders exceed the 60 t single-round bed limit and must span
+        #     rounds, and the official PDF example itself puts A20260104 in two
+        #     adjacent rounds.
+        # The two surviving sub-rules of clause 6 are both charged here, so a
+        # plan is safe under either emphasis.
+        for a, batch in enumerate(plan):
+            rounds = batch.get('length_scheme') or []
+            seen_on = [frozenset(r.keys()) for r in rounds]
+            for j in range(len(seen_on) - 1):
+                if seen_on[j] == seen_on[j + 1]:
+                    bump('continuity', scheme=a, round=j)
+            per_order = {}
+            for j, s in enumerate(seen_on):
+                for oid in s:
+                    per_order.setdefault(oid, []).append(j)
+            for oid, js in per_order.items():
                 if len(js) > 1 and js != list(range(js[0], js[0] + len(js))):
-                    bump('continuity', scheme=a, order=oid, rounds=js)
+                    bump('continuity_skip', scheme=a, order=oid, rounds=js)
     if rules.penalise_short_delivery:
         # Semi-final delivery floor (constraints.txt clause 8 and the PDF's
         # under-production penalty).  Pieces are recounted the way

@@ -26,13 +26,18 @@ sys.path.insert(0, str(ROOT))
 from platform_score import evaluate, Rules  # noqa: E402
 
 DATA = ROOT / 'data' / 'semi'
+# ⚠️ 2026-09-22 切换：这六份方案必须来自**交付路径的合规驱动**
+# `build_semi_plan2.py`（`continuity_shaper` 定形，clause 6 合规）。旧清单
+# (`runs/semi_v3`, `runs/capx_*`) 由 `round_shaper` 产出——它把每个订单放进每一轮，
+# 相邻两轮集合完全相同，会被官方判「跨轮接续不连续」（第一次提交的 7,559 条）。
+# 用它们填 §6.2 的表格会与交付方案不同源。
 PLANS = [
-    ('0.02', ROOT / 'runs/semi_v3/result.json'),
-    ('0.05', ROOT / 'runs/capx_0.05/result.json'),
-    ('0.10', ROOT / 'runs/capx_0.10/result.json'),
-    ('0.25', ROOT / 'runs/capx_0.25/result.json'),
-    ('0.50', ROOT / 'runs/capx_0.50/result.json'),
-    ('1.00', ROOT / 'runs/capx_1.00/result.json'),
+    ('0.02', ROOT / 'runs/cont_r002/result.json'),
+    ('0.05', ROOT / 'runs/cont_r005/result.json'),
+    ('0.10', ROOT / 'runs/cont_final/result.json'),
+    ('0.25', ROOT / 'runs/cont_deliver25/result.json'),
+    ('0.50', ROOT / 'runs/cont_r050/result.json'),
+    ('1.00', ROOT / 'runs/cont_r100/result.json'),
 ]
 
 HEADER = (

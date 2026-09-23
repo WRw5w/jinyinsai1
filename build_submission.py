@@ -91,7 +91,15 @@ def build(args):
     mode = getattr(args, 'weight_mode', 'strict')
     rule = 'per_round' if mode == 'strict' else mode
     before = validate_plan(source, orders, cfg, blanks, blank_rule=rule)
-    plan = merge_compatible(source, orders, cfg.max_rounds)
+    if getattr(args, 'no_merge', False):
+        # The source plan is already the final scheme set: its rounds were shaped
+        # to satisfy clause 6 (no skipped rounds, adjacent round sets differ).
+        # Concatenating rounds from different schemes (merge_compatible) would
+        # splice unrelated round sets together and reintroduce the continuity
+        # violation -- so packaging must be byte-for-byte identity here.
+        plan = copy.deepcopy(source)
+    else:
+        plan = merge_compatible(source, orders, cfg.max_rounds)
     after = validate_plan(plan, orders, cfg, blanks, blank_rule=rule)
     independent = check(plan, data=Path(getattr(args, 'data', 'data')), weight_mode=mode,
                         round=round_name)
@@ -128,7 +136,22 @@ def build(args):
                      weight_mode=mode, round=round_name)['passed']:
             raise ValueError('Packed JSON failed independent validation')
     audit = json.loads(Path(args.audit).read_text(encoding='utf-8'))
-    prediction = evaluate_platform(plan, data=Path(getattr(args, 'data', 'data')), round_name=round_name)
+    # Knife baseline B.  The semi-final value is NOT in any official written rule:
+    # 160000 comes only from the group Q&A archived in
+    # evidence/rules/BASELINE_160000_SOURCE.md, while 90000 is the preliminary
+    # value RULES.md records and the default baked into platform_score.Rules.
+    # The driver build_semi_plan2.py optimises at 160000, so silently inheriting
+    # platform_score's 90000 default here would make the packaged report disagree
+    # with the plan it packages and with 复赛技术报告.md §6.7.  Make the choice
+    # explicit and report BOTH readings, so no single one is presented as settled.
+    default_baseline = 160000.0 if round_name == 'semi' else 90000.0
+    baseline = default_baseline if args.baseline_knives is None else args.baseline_knives
+    prediction = evaluate_platform(plan, data=Path(getattr(args, 'data', 'data')),
+                                   round_name=round_name, baseline_knives=baseline)
+    anchor = None
+    if baseline != 90000.0:
+        anchor = evaluate_platform(plan, data=Path(getattr(args, 'data', 'data')),
+                                   round_name=round_name, baseline_knives=90000.0)
     delivered = defaultdict(int)
     lookup = {o.oid: o for o in orders}
     for batch in plan:
@@ -151,6 +174,8 @@ def build(args):
                   before=before, after=after, production=production,
                   before_after_are_legacy_physical_model_not_official_score=True,
                   calibrated_prediction=prediction,
+                  calibrated_prediction_at_90000_anchor=anchor,
+                  calibrated_prediction_baseline_knives=baseline,
                   independent_platform_check=independent,
                   blank_weight_mode=mode,
                   json_file=str(json_path.resolve()), zip_file=str(zip_path.resolve()),
@@ -183,6 +208,27 @@ def build(args):
         tail_note = ('本地格式、约束和 ZIP 校验通过，不等于官方评分器确认通过。'
                      '若官方校验要求原始 5000 个订单号全部出现，必须先取得 A20260949 的正确值'
                      '或官方异常过滤口径；不能用凭空补值来保证通过。本脚本没有执行网页上传。')
+    if getattr(args, 'no_merge', False):
+        merge_note = ('本打包步骤**不做任何轮次合并**：源方案已由 `continuity_shaper` 按 clause 6 定形'
+                      '（同一订单的轮次连续、相邻两轮订单集合不同），逐字节原样写入，'
+                      '因此「校验的对象」与「提交的对象」完全相同。')
+    else:
+        merge_note = '本打包步骤只合并同钢种、同直径、同坯型的方案，保留每轮参数。'
+    if anchor is None:
+        score_note = (f"预测总分（基准刀数 B={baseline:g}）：刀数子分封顶假设下 "
+                      f"{prediction['score_capped']:.6f}；不封顶假设下 {prediction['score_uncapped']:.6f}。"
+                      "新包仍需官方实测。")
+        baseline_note = f"基准刀数取 B={baseline:g}。"
+    else:
+        score_note = (f"预测总分（**同时给出两个基准刀数，不取其一**）："
+                      f"B=90000（初赛值 / `RULES.md` 所记 / `platform_score` 默认）时，"
+                      f"刀数子分封顶假设下 {anchor['score_capped']:.6f}，不封顶 {anchor['score_uncapped']:.6f}；"
+                      f"B={baseline:g}（群答疑给出的复赛值，档案 "
+                      f"`evidence/rules/BASELINE_160000_SOURCE.md`）时，"
+                      f"封顶 {prediction['score_capped']:.6f}，不封顶 {prediction['score_uncapped']:.6f}。"
+                      "新包仍需官方实测。")
+        baseline_note = ("基准刀数 B 无官方书面文件：复赛值 160000 只见于群答疑，90000 是初赛值，"
+                         "本包两个都算，不把任一读法当作已确认。")
     note = f'''# 提交候选包说明
 
 上传文件：{zip_path.name}，压缩包根目录仅包含同名 JSON。
@@ -191,13 +237,13 @@ def build(args):
 
 {knife_note}{prediction['knives']}；预测成材率：{prediction['yield_rate']:.8%}；组合覆盖率：{prediction['coverage']:.8%}（分母为有效订单数）；按原始全部订单计的组合覆盖率：{report['combination_coverage_over_source']:.8%}。
 
-预测总分：刀数子分封顶假设下 {prediction['score_capped']:.6f}；不封顶假设下 {prediction['score_uncapped']:.6f}。新包仍需官方实测。{calibration_note}
+{score_note}{calibration_note}
 
-输入方案：{Path(args.input).resolve()}。length_scheme 只写净定尺整数倍，整轮统一加 2m 余量计算长度和承重。本打包步骤只合并同钢种、同直径、同坯型的方案，保留每轮参数。每个新方案最多 {cfg.max_rounds} 轮，符合当前模型上限。详见 validation_report.json。
+输入方案：{Path(args.input).resolve()}。length_scheme 只写净定尺整数倍，整轮统一加 2m 余量计算长度和承重。{merge_note}每个新方案最多 {cfg.max_rounds} 轮，符合当前模型上限。详见 validation_report.json。
 
 超产口径：以每单向上取整的需求支数为基准，额外支数不超过需求支数的 {cfg.max_overproduction_ratio:.2%}（向下取整）；实际有 {production['orders_with_extra_pieces']} 单额外交付，单单最大比例 {production['max_actual_extra_ratio']:.4%}，按重量汇总额外产量 {production['extra_kg']:.3f} kg（{production['mass_weighted_extra_ratio']:.4%}）。题面四条设备约束未列出超产上限，此上限为求解设置，尚未获官方单独确认。
 
-评分预测按每个订单段 `int(length // size) + 1` 计刀数，并按截成整数毫米的直径计算成材质量；物理可行性仍按原始小数直径保守校验。总分使用 40/30/20/10 权重、推测的90000基准刀数与时间满分。validation_report.json 的 before/after 保留旧物理模型统计用于审计，其中旧 platform_score_estimate 已失准；请使用 calibrated_prediction，不能再按旧估分选提交。
+评分预测按每个订单段 `int(length // size) + 1` 计刀数，并按截成整数毫米的直径计算成材质量；物理可行性仍按原始小数直径保守校验。总分使用 40/30/20/10 权重与时间满分；{baseline_note}validation_report.json 的 before/after 保留旧物理模型统计用于审计，其中旧 platform_score_estimate 已失准；请使用 calibrated_prediction，不能再按旧估分选提交。
 
 独立校验器直接读取原始 CSV 和提交 JSON：整数倍、含余量的长度/承重、宽度、交付数量及物料检查均通过。已复现旧包 11315 条整数倍错误与 44 条长度错误；重量采用比反馈数量更保守的检查，不声称已拿到官方评分器源码。
 
@@ -233,6 +279,14 @@ def parser():
                     help='blank-material check口径; default strict keeps prior behaviour')
     ap.add_argument('--extra-note', default=None,
                     help='markdown file appended verbatim to 提交说明.md (sidecar only, never inside the ZIP)')
+    ap.add_argument('--baseline-knives', type=float, default=None,
+                    help='knife subscore baseline B for the reported prediction; '
+                         'default: 160000 for semi (the value build_semi_plan2.py optimises at), '
+                         '90000 for prelim. When it differs from 90000 the report and 提交说明.md '
+                         'carry both readings.')
+    ap.add_argument('--no-merge', action='store_true',
+                    help='skip merge_compatible; use when the source plan is already the '
+                         'final scheme set (semi-final continuity-shaped plans)')
     return ap
 
 
