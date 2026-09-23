@@ -126,6 +126,52 @@ class SemiCheckTests(unittest.TestCase):
         self.assertEqual(result['valid_orders'], 2)
         self.assertEqual(result['source_orders'], 3)
 
+    def test_cross_round_seam_continuity(self):
+        """Round j must END on round j+1's FIRST order (`跨轮接续不连续`).
+
+        Pinned by the 2026-09-23 official 0-point feedback on
+        `submission_semi_merged_v2`: 7030 violations, 35150 penalty, `unfeasible`.
+        Emitting the same key order in every round (what the solver used to do)
+        satisfies "same orders in adjacent rounds" but fails this seam.
+        """
+        # Same two orders in both rounds, same order -> 1 seam violation.
+        rounds = [{'A': TOTAL_NET / 2, 'B': 0.0}, {'A': TOTAL_NET / 2, 'B': 0.0}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertEqual(errs.get('continuity_seam'), 1)
+
+        # Rotate round 0 so it ends on round 1's first order -> clean.
+        rounds = [{'B': 0.0, 'A': TOTAL_NET / 2}, {'A': TOTAL_NET / 2, 'B': 0.0}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertIsNone(errs.get('continuity_seam'))
+
+        # Rounds with no shared order are unconstrained: A only, then B only.
+        # (Round 0 has A, round 1 has B, so no seam exists.)
+        rounds = [{'A': TOTAL_NET, 'B': 0.0}, {'B': TOTAL_NET, 'A': 0.0}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertIsNone(errs.get('continuity_seam'))
+
+    def test_rotate_scheme_rounds_closes_every_seam(self):
+        """The packaging helper must turn a violating plan into a clean one
+        WITHOUT touching any (order -> length) pair in any round."""
+        from build_submission import rotate_scheme_rounds
+
+        rounds = [{'A': TOTAL_NET / 2, 'B': 0.0},
+                  {'A': TOTAL_NET / 2, 'B': 0.0},
+                  {'A': 0.0, 'B': TOTAL_NET / 2}]
+        plan = clean_plan(rounds)
+        before = [[set(r.items()) for r in b['length_scheme']] for b in plan]
+        self.assertEqual(check(plan, Path(self._tmp.name), round='semi')
+                         ['error_counts'].get('continuity_seam'), 2)
+
+        fixed = rotate_scheme_rounds(plan)
+        self.assertIsNone(check(fixed, Path(self._tmp.name), round='semi')
+                          ['error_counts'].get('continuity_seam'))
+        after = [[set(r.items()) for r in b['length_scheme']] for b in fixed]
+        self.assertEqual(before, after, 'rotation must not change any round content')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

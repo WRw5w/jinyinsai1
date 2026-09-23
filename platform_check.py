@@ -209,6 +209,21 @@ def check(plan, data=Path('data'), check_delivery=True, weight_mode='strict',
                 js = sorted(js)
                 if len(js) > 1 and js != list(range(js[0], js[0] + len(js))):
                     error('continuity', order=oid, scheme=a, rounds=js)
+        # `跨轮接续不连续` -- STRICTER than round adjacency, pinned by the
+        # 2026-09-23 official feedback on submission_semi_merged_v2 (0 points,
+        # 7030 violations, 35150 penalty).  The platform reads a scheme's rounds
+        # as one continuous billet stream, so the LAST order cut in round j must
+        # be the FIRST order cut in round j+1.  Emitting the same key order in
+        # every round satisfies "same orders" but breaks this seam whenever two
+        # rounds share orders.  The count here must reproduce the official 7030
+        # on that ZIP.
+        for a, batch in enumerate(plan if isinstance(plan, list) else []):
+            rounds = batch.get('length_scheme') or []
+            for j, (left, right) in enumerate(zip(rounds, rounds[1:])):
+                if left and right and set(left) & set(right) \
+                        and next(reversed(left)) != next(iter(right)):
+                    error('continuity_seam', scheme=a, round=j,
+                          left_last=next(reversed(left)), right_first=next(iter(right)))
     for oid, order in orders.items():
         if used[oid] != 1:
             error('order_coverage', order=oid, occurrences=used[oid])

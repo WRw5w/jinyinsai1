@@ -191,30 +191,6 @@ def _floor(x):
     return math.floor(x + 1e-10 * max(1, abs(x)))
 
 
-def platform_segment_count(k, size, segment_trim):
-    """How many segments the PLATFORM counts for `k` pieces -- usually `k`, sometimes `k-1`.
-
-    `_export` writes `round(k * size + segment_trim, 9)` and the platform's semi rule
-    counts `int(length // size)` per row.  For many `(k, size)` pairs that float
-    product is one ulp below the integer multiple, so `//` returns `k - 1` and the
-    platform credits one FEWER segment than the plan intends.  This is not a guess:
-    the 2026-09-16 92.02 feedback (`entry_knives`'s docstring) is exactly this
-    collapse, the platform reporting `108671 = sum(k for k >= 2) + 2 * #{k == 1}`
-    over 35718 segments of a plan whose lengths were written 1e-12 relatively low.
-
-    Measuring the seeding-only drop under both conventions:
-
-        intended (round(k))      175,016 segments  -> 186,376 knives   score 92.3
-        platform (int(length//size)) 164,371 segments -> 175,731 knives  score 93.65
-
-    10,645 knives, 6% of the score denominator.  Worse, the map is NOT monotone in
-    `k`: `reshape_plan.py` cut `Σk` by 259 and RAISED the scored count by 3,963,
-    losing 0.81 points while its own model promised +0.05.  So the search has to be
-    told which count it is paying, which is what `Config.knife_convention` does.
-    """
-    return int(round(k * size + segment_trim, 9) // size)
-
-
 @dataclass
 class Config:
     bed_length: float = 120.0        # m, per round
@@ -244,47 +220,6 @@ class Config:
     max_overproduction_ratio: float | None = 0.0
     objective: str = "lex"           # lex or score
     baseline_knives: float | None = None
-    # Knives this search instance CANNOT see: the rest of the instance, when the
-    # whole problem is solved in chunks.  It exists because `min(1, baseline/K)`
-    # makes the knife subscore a CONSTANT whenever the instance at hand is much
-    # smaller than the baseline, which is exactly what chunking produces.
-    #
-    # Measured 2026-09-22 on the semi-final drop: a 60-order chunk needs ~800
-    # knives against `baseline = 160000`, so `160000/800 = 200 > 1`, the cap binds,
-    # and the knife term carries ZERO gradient inside the chunk.  The annealer then
-    # optimises the only live term, `30 * finished/raw`, and buys yield at any knife
-    # price.  Across 183 chunks that cost +9917 knives for +0.300 pp of yield:
-    #   knives +9917 at the global price 40*160000/180000^2 = 1.975e-4  ->  -1.9440
-    #   yield  +0.00300048 * 30                                        ->  +0.0900
-    #   net -1.8540  vs the observed -1.8534 between the seeding-only and the
-    #   annealed full plans.  With the offset the derivative is the true global
-    #   shadow price `-40*baseline/(offset+K)^2` and the trade is priced correctly.
-    #
-    # `0.0` reproduces the pre-fix arithmetic exactly, so every caller that does not
-    # split the problem keeps its behaviour and its numbers.
-    knife_offset: float = 0.0
-    # The same defect hits the OTHER two terms, in the opposite direction, and worse.
-    #
-    # `_key` divides the instance's own delivered mass by its own raw mass.  Solved one
-    # 60-order chunk at a time that ratio is `D_chunk / R_chunk`, so the price of a
-    # kilogram of raw comes out as `30 * D_chunk / R_chunk^2` --
-    # `30 * 2.4117e6 / 2.5906e6^2 = 1.078e-5` -- while the drop's real price is
-    # `30 * D_tot / R_tot^2 = 30 * 500.9e6 / 551.8e6^2 = 4.935e-8`.  A factor of 218.
-    # Measured 2026-09-22: 20 s of annealing on one chunk spent 119 knives to save
-    # 20803 kg of raw.  Globally that is `+0.00103 (yield) - 0.0205 (knives) = -0.0195`
-    # points, but `_key` scored it as `+0.2737` and accepted it.
-    #
-    # Coverage needs the same treatment for a third reason: `_key` divides by the
-    # instance's order count, so inside a chunk one covered order is worth
-    # `20 / 60 = 0.33` points instead of `20 / 9999 = 0.002` -- 167 times too much.
-    #
-    # So the local metrics are scored as the whole drop by adding what this search
-    # cannot see.  All four default to 0 and `coverage_total` to None, which
-    # reproduces the historical arithmetic exactly.
-    numerator_offset: float = 0.0    # delivered (semi: demand-capped) kg outside
-    raw_offset: float = 0.0          # raw kg outside
-    covered_offset: float = 0.0      # covered orders outside
-    coverage_total: float | None = None   # orders in the SCORED instance
     exact_max_orders: int = 10       # per steel/diameter group
     exact_max_work: int = 1000000    # explicit failure, never false optimality
     search_max_group: int = 8
@@ -295,22 +230,6 @@ class Config:
     continuity: bool = False
     coverage_shared: bool = False
     enforce_order_mass_floor: bool = False   # constraints.txt clause 8 (semi only)
-    # Semi-only: cap the yield numerator at each order's demand, matching
-    # `platform_score.row_metrics`/`_demand_numerator_mass`.  Off by default because
-    # the preliminary round is calibrated against an UNCAPPED numerator.  See
-    # `_capped_finished` for the measured cost of leaving it off on the semi drop.
-    cap_yield_numerator: bool = False
-    # Which knife count the search pays for.  'intended' counts `Σk + 1` per round --
-    # the physical number of cuts the plan means to make, and what `validate_plan`
-    # recovers from the exported lengths.  'platform_floor' counts
-    # `Σ platform_segment_count(k) + 1`, which is what the platform's `int(length //
-    # size)` credits once the length has made a JSON round trip.  They differ by 6% on
-    # the semi drop and NOT monotonically, so the search must be told which one it is
-    # optimising -- otherwise it can trade a `Σk` saving for a scored regression, which
-    # `reshape_plan.py` did for -0.81 points.  The platform floors: see
-    # `platform_segment_count`.  Default 'intended' keeps every existing caller and test
-    # on the numbers it was calibrated against.
-    knife_convention: str = 'intended'
 
     def validate(self):
         if self.length_mode not in ('trimmed_segments', 'net_shared_trim'):
@@ -319,13 +238,10 @@ class Config:
             _positive(getattr(self, name), name)
         for name in ("bed_width", "max_rounds", "exact_max_orders", "exact_max_work", "search_max_group"):
             _integer(getattr(self, name), name)
-        for name in ("trim", "bar_gap_mm", "min_bed_length", "min_bed_weight",
-                     "knife_offset", "numerator_offset", "raw_offset", "covered_offset"):
+        for name in ("trim", "bar_gap_mm", "min_bed_length", "min_bed_weight"):
             x = getattr(self, name)
             if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x < 0:
                 raise ModelError(f"{name} must be finite and nonnegative")
-        if self.coverage_total is not None:
-            _positive(self.coverage_total, "coverage_total")
         # `None` is a legitimate value here and means "no over-production ceiling".
         if self.max_overproduction_ratio is not None:
             x = self.max_overproduction_ratio
@@ -341,8 +257,6 @@ class Config:
             raise ModelError("rolling_yield must be in (0, 1]")
         if self.objective not in ("lex", "score", "platform_score"):
             raise ModelError("objective must be lex, score or platform_score")
-        if self.knife_convention not in ('intended', 'platform_floor'):
-            raise ModelError("knife_convention must be intended or platform_floor")
         if self.objective in ('score','platform_score') and self.baseline_knives is None:
             raise ModelError("baseline_knives is required for score objectives")
 
@@ -614,16 +528,9 @@ class Model:
         usable = self.blank_length(ids, blank)
         if max(lengths) + cfg.round_trim > usable + 1e-8:
             return None
-        finished = sum(k * parallel * self.orders[i].size * linear for i, k in zip(ids, ks))
         count = max(1, _ceil(total * parallel / usable))
-        if cfg.length_mode == 'net_shared_trim':
-            if cfg.knife_convention == 'platform_floor':
-                knives = sum(platform_segment_count(k, self.orders[i].size, cfg.segment_trim)
-                             for i, k in zip(ids, ks) if k) + 1
-            else:
-                knives = sum(ks) + 1
-        else:
-            knives = sum(k + 1 for k in ks if k)
+        finished = sum(k * parallel * self.orders[i].size * linear for i, k in zip(ids, ks))
+        knives = sum(ks) + 1 if cfg.length_mode == 'net_shared_trim' else sum(k + 1 for k in ks if k)
         return Round(tuple(ks), parallel, count, knives, finished, count * blank.weight)
 
 
@@ -632,19 +539,10 @@ def _add(a, b):
 
 
 def _key(metrics, cfg, n):
-    # Score the instance as the WHOLE drop: add the part of every additive metric that
-    # this search cannot influence.  With the offsets at their defaults this is
-    # byte-for-byte the historical arithmetic; see `Config.knife_offset` and
-    # `Config.raw_offset` for why a chunk cannot be scored on its own numbers.
     knives, finished, raw, covered = metrics
-    priced_knives = knives + cfg.knife_offset
-    priced_finished = finished + cfg.numerator_offset
-    priced_raw = raw + cfg.raw_offset
-    priced_covered = covered + cfg.covered_offset
-    total_orders = cfg.coverage_total if cfg.coverage_total else n
     # Do not turn floating-point summation noise into a better yield/score.
-    yield_rate = round(priced_finished / priced_raw, 12) if priced_raw else 0.0
-    coverage = priced_covered / total_orders if total_orders else 0.0
+    yield_rate = round(finished / raw, 12) if raw else 0.0
+    coverage = covered / n if n else 0.0
     lex = (knives, -yield_rate, -coverage)
     if cfg.objective == "lex":
         return lex
@@ -652,66 +550,18 @@ def _key(metrics, cfg, n):
         # Weight table of PDF 九: 40 knives / 30 yield / 20 coverage / 10 time.
         # The time term is a constant here because the solver cannot price the
         # official wall-clock subscore, and it does not affect the argmax.
-        score = 40 * min(1.0, cfg.baseline_knives / priced_knives) if priced_knives else 0
+        score = 40 * min(1.0, cfg.baseline_knives / knives) if knives else 0
         score += 30 * yield_rate + 20 * coverage + 10
         return (-round(score, 12),) + lex
-    score = (40 * cfg.baseline_knives / priced_knives if priced_knives else 0) \
-        + 40 * yield_rate + 20 * coverage
+    score = (40 * cfg.baseline_knives / knives if knives else 0) + 40 * yield_rate + 20 * coverage
     return (-round(score, 12),) + lex
 
 
-def _capped_finished(model, batch):
-    """Yield numerator with every order capped at its demand, as the semi-final scores it.
-
-    `Batch.metrics` reports the UNCAPPED delivered mass, and the platform gives no
-    yield credit for pieces delivered above an order's demand -- over-production is
-    free but yield-less.  Optimising the uncapped numerator therefore buys a gain the
-    scoreboard never pays for: measured 2026-09-22, 20 s of annealing on one 60-order
-    chunk improved `_key` by +0.365 points, of which 30 * (uncapped finished/raw) was
-    the ENTIRE +0.365 (the knife term was flat, see `Config.knife_offset`), while the
-    assembled drop's capped numerator is pinned at total demand and its yield did not
-    move at all -- only the knife count rose.  Capping removes that phantom gradient.
-
-    The cap is exact per batch, not just per plan: `validate_plan` refuses an order
-    that appears in two schemes, so every round delivering to an order lives in the
-    same `Batch` and `search_10s`'s incremental `current - before + after` stays
-    valid.  `delivered` is an integer count of pieces and `order.pieces` is an int, so
-    `min` is exact -- no tolerance needed.
-    """
-    delivered = {}
-    for r in batch.rounds:
-        for i, k in zip(batch.ids, r.ks):
-            if k:
-                delivered[i] = delivered.get(i, 0) + k * r.parallel
-    total = 0.0
-    for i in batch.ids:
-        order = model.orders[i]
-        # `linear_weight_int` (diameter truncated to whole mm), not `linear_weight`:
-        # that is the weight `platform_score.row_metrics`/`_demand_numerator_mass`
-        # actually credit, and the difference is not academic -- on the seeding-only
-        # drop the exact-diameter version reports a numerator of 506,504,659 kg against
-        # the platform's 500,935,599 kg, 1.1% too high, which would mis-set the yield
-        # level and, through `30 * D / R^2`, the price of raw as well.
-        total += min(delivered.get(i, 0), order.pieces) * order.size * order.linear_weight_int
-    return total
-
-
-def _totals(batches, model=None):
-    """Sum `Batch.metrics`; with `model` and `cap_yield_numerator`, cap the numerator.
-
-    `model=None` reproduces the historical uncapped sum exactly, so every caller that
-    does not opt in keeps its numbers.
-    """
-    knives = raw = covered = 0
-    finished = 0.0
-    cap = model is not None and model.cfg.cap_yield_numerator
+def _totals(batches):
+    result = (0, 0.0, 0.0, 0)
     for batch in batches:
-        m = batch.metrics
-        knives += m[0]
-        raw += m[2]
-        covered += m[3]
-        finished += _capped_finished(model, batch) if cap else m[1]
-    return (knives, finished, raw, covered)
+        result = _add(result, batch.metrics)
+    return result
 
 
 def _dominates(a, b):
@@ -1301,27 +1151,7 @@ def _enumerate_round_shapes(model, ids, sizes, linear, blank_len, plimit, cfg):
     truncated = False
 
     def offer(parallel, ks):
-        """Record a candidate round if it is legal; returns whether it was new.
-
-        The dedup key is `delta` -- the piece vector the round hands over -- and the
-        value kept for it must be the WIDEST bed that can serve that same delivery.
-        A round costs `sum(ks) + 1` knives and `ks_j = delta_j / parallel`, so for a
-        fixed `delta` the knife bill is `sum(delta) / parallel + 1`: monotone
-        DECREASING in `parallel`, and the round length
-        `sum(delta_j * s_j) / parallel + trim` shrinks with it too.  Wider is
-        therefore strictly cheaper AND lighter on the blank, at identical delivery
-        and with the identical set of orders present (so continuity is untouched).
-
-        This used to read `parallel >= old[0]`, which kept the shape that arrived
-        FIRST.  Since the `parallel` sweep above runs ASCENDING, "first" meant the
-        NARROWEST bed, and every wider -- cheaper -- twin was rejected on sight.
-        The same mistake had already been fixed in `_solo_scheme.try_shape`, where
-        the sweep was made descending for exactly this reason; the shared-group
-        enumeration kept the inverted guard.  `diagnostics/round_shape_audit.py`
-        priced the damage on our own semi-final plan: 1,290 recoverable knives over
-        138 rounds at exactly equal delivery, 8,038 knives over 1,453 rounds once a
-        round is allowed to hand over a little extra.
-        """
+        """Record a candidate round if it is legal; returns whether it was new."""
         nonlocal probes
         probes += 1
         lengths = [k * s for k, s in zip(ks, sizes) if k]
@@ -1334,22 +1164,12 @@ def _enumerate_round_shapes(model, ids, sizes, linear, blank_len, plimit, cfg):
             return False
         delta = tuple(k * parallel for k in ks)
         old = best.get(delta)
-        if old is not None and parallel <= old[0]:
+        if old is not None and parallel >= old[0]:
             return False
         best[delta] = (parallel, ks)
         return True
 
-    # DESCENDING `parallel`.  The sweep is not free: the product below is bounded by
-    # `_SHAPE_WORK_LIMIT` probes and abandons the remaining beds once they are spent,
-    # so the direction decides *which* beds survive truncation.  Ascending spent the
-    # whole budget on the narrow beds and never reached the wide ones -- the exact
-    # opposite of what the objective wants.  Measured on the 3-size `dia 43` group
-    # (sizes 4.75 / 5.0 / 8.15, `plimit` 46, 103,184 legal deliveries), both at the
-    # shipped 300,000-probe budget: ascending truncated after `parallel = 19` and
-    # handed back 1,137 moves of which 237 still had a wider twin costing 2,411
-    # knives, while descending covered `parallel = 46 ... 28` and handed back moves
-    # with no wider twin left at all (`diagnostics/widen_repair_cost.py`).
-    for parallel in range(plimit, 0, -1):
+    for parallel in range(1, plimit + 1):
         # No `cap` here on purpose: the untrimmed shape set is cached, and the
         # caller filters it by the live remainder.  `max_seg` bounds each order by
         # what the bed can physically hold, which is the only hard ceiling.
@@ -1437,14 +1257,7 @@ def _enumerate_round_shapes(model, ids, sizes, linear, blank_len, plimit, cfg):
     # and several of them score highest for their own order, so this ordering keeps
     # both kinds reachable while making the search dive into the large-delivery
     # branches first.
-    #
-    # The `parallel` half of the key is `-m[1]`, not `m[1]`.  It only breaks ties on
-    # equal total delivery, but among moves that hand over the same number of pieces
-    # the knife bill is `sum(delta) / parallel + 1`, so the WIDER bed is the cheaper
-    # one -- and this sort feeds `moves[:_MOVE_CAP]`, which discards the tail.  A
-    # `m[1]` key therefore spent the cap on the expensive twins, the same inversion
-    # `offer()` had.
-    moves.sort(key=lambda m: (-sum(m[0]), -m[1]))
+    moves.sort(key=lambda m: (-sum(m[0]), m[1]))
     return moves[:_MOVE_CAP]
 
 
@@ -2072,7 +1885,7 @@ def search_10s(orders: list[Order], cfg: Config, seconds=10.0, seed=1, blanks=No
             current_ids.append(next_id)
             next_id += 1
         buckets.append(current_ids)
-    current_metrics = _totals(current.values(), model)
+    current_metrics = _totals(current.values())
     best_metrics, best = current_metrics, dict(current)
     # Accumulate edits since the last incumbent instead of copying/scoring 20k
     # batches whenever a two-batch neighborhood improves the plan.
@@ -2122,8 +1935,8 @@ def search_10s(orders: list[Order], cfg: Config, seconds=10.0, seed=1, blanks=No
             replacements = [construct(model, tuple(part), rng, deadline, True) for part in parts]
             if any(batch is None for batch in replacements):
                 continue
-            before = _totals((current[bucket[pos]] for pos in positions), model)
-            after = _totals(replacements, model)
+            before = _totals(current[bucket[pos]] for pos in positions)
+            after = _totals(replacements)
             proposed = tuple(x - y + z for x, y, z in zip(current_metrics, before, after))
             key = _key(proposed, cfg, len(orders))
             improved = key < _key(current_metrics, cfg, len(orders))
@@ -2285,12 +2098,7 @@ def validate_plan(plan, orders, cfg, blanks=None, blank_rule='per_round'):
                 finished += counted * o.size * linear
                 finished_physical += delivered * o.size * linear
                 finished_int_delta += delivered * o.size * o.linear_weight_int
-                if not shared:
-                    knives += k + 1
-                elif cfg.knife_convention == 'platform_floor':
-                    knives += platform_segment_count(k, o.size, cfg.segment_trim)
-                else:
-                    knives += k
+                knives += k if shared else k + 1
                 order_rounds.setdefault(name, []).append(j)
                 # Mass this round allocates to this order.  Every one of the
                 # `parallel` bars is cut into this order's share, so the delivered

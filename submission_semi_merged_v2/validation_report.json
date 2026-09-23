@@ -1,0 +1,212 @@
+{
+  "package_created": true,
+  "official_acceptance_verified": false,
+  "complete_original_order_coverage": false,
+  "input_result": "D:\\02_Projects\\ML\\jinyinsai1_nolimit\\runs\\semi_merged_v2\\result.json",
+  "source_order_count": 10000,
+  "included_order_count": 9999,
+  "combination_coverage_over_source": 0.9999,
+  "excluded_orders": [
+    {
+      "line": 282,
+      "order_id": "B20270281",
+      "reason": "nonpositive_weight",
+      "original": {
+        "订单号": "B20270281",
+        "订单重量": "-25.418",
+        "钢种": "NP01",
+        "规格": "43",
+        "定尺长度": "6100"
+      }
+    }
+  ],
+  "model_assumptions": [
+    "one shared 1 m trim at each round end; never written into length_scheme",
+    "coverage counts orders sharing a single cold-bed round",
+    "weight 40/30/20/10 with an independent time subscore (PDF 九); RULES.md records a conflicting Q&A claim that time is folded into yield",
+    "knife baseline for the semi-final round is unknown; left unset"
+  ],
+  "before": {
+    "orders": 9999,
+    "plans": 3708,
+    "rounds": 10742,
+    "knives": 185495,
+    "finished_weight": 506504658.57457685,
+    "blank_weight": 556001670.9479957,
+    "yield_rate": 0.9109768639921076,
+    "coverage": 0.9993999399939995,
+    "objective": "lex",
+    "length_mode": "net_shared_trim",
+    "finished_physical_weight": 517626172.3424669,
+    "pdf_score": 90.92935104898989
+  },
+  "after": {
+    "orders": 9999,
+    "plans": 1896,
+    "rounds": 10742,
+    "knives": 185495,
+    "finished_weight": 506504658.5745602,
+    "blank_weight": 556001670.9479924,
+    "yield_rate": 0.910976863992083,
+    "coverage": 1.0,
+    "objective": "lex",
+    "length_mode": "net_shared_trim",
+    "finished_physical_weight": 517626172.3424511,
+    "pdf_score": 90.94135224910892
+  },
+  "production": {
+    "per_order_extra_limit": null,
+    "orders_with_extra_pieces": 9437,
+    "max_actual_extra_ratio": 0.9574468085106382,
+    "rounded_demand_kg": 506504658.5745688,
+    "extra_kg": 11121513.767882288,
+    "mass_weighted_extra_ratio": 0.02195737705390699
+  },
+  "before_after_are_legacy_physical_model_not_official_score": true,
+  "calibrated_prediction": {
+    "round": "semi",
+    "rules": {
+      "knife_add_per": "round",
+      "coverage_shared": true,
+      "max_rounds": 6,
+      "continuity": true,
+      "weights": [
+        0.4,
+        0.3,
+        0.2,
+        0.1
+      ],
+      "baseline_knives": 160000.0,
+      "time_subscore": 100.0
+    },
+    "knives": 169785,
+    "finished_weight": 500935598.5766799,
+    "blank_weight": 556001670.9479924,
+    "raw_weight": 556001670.9479924,
+    "physical_finished_weight": 517626172.34245795,
+    "coverage": 0.9993999399939995,
+    "coverage_over_source": 0.9993,
+    "coverage_percent_rounded": 99.94,
+    "source_order_count": 10000,
+    "valid_order_count": 9999,
+    "included_order_count": 9999,
+    "combination_order_count": 9993,
+    "excluded_invalid_orders": [
+      "B20270281"
+    ],
+    "plans": 1896,
+    "rounds": 10742,
+    "entries": 31867,
+    "violations": {},
+    "violation_count": 0,
+    "violation_detail": [],
+    "penalty_points": 0.0,
+    "validation": "Scoring only; run platform_check separately with full raw diameters.",
+    "evidence": [
+      "diagnostics/knife_calibration.json",
+      "diagnostics/yield_semantics.json"
+    ],
+    "calibrated_observations": "Preliminary knife counts are exact and displayed yields match all seven official feedbacks. Semi-final knives and coverage follow constraints.txt and PDF 六/九 and are unverified against any official feedback, because none exists yet.",
+    "assumptions": {
+      "baseline_knives": 160000.0,
+      "time_subscore": 100.0,
+      "weights": [
+        0.4,
+        0.3,
+        0.2,
+        0.1
+      ],
+      "knife_component_cap_confirmed": true,
+      "final_total_cap_confirmed": false,
+      "rounding_order_confirmed": false,
+      "note": "Knife cap confirmed by the 98.93 feedback; total cap moot (ceiling is exactly 100). Displayed totals are quantised to 0.01."
+    },
+    "official_yield_estimate": 0.9009605991337689,
+    "yield_rate": 0.9009605991337689,
+    "yield_percent": 90.09605991337689,
+    "yield_percent_rounded": 90.1,
+    "score_capped": 94.71154834617565,
+    "score_uncapped": 94.71154834617565,
+    "score_total_cap_only": 94.71154834617565,
+    "score_capped_display": 94.71,
+    "score_uncapped_display": 94.71,
+    "score_from_rounded_subscores_capped": 94.714,
+    "score_from_rounded_subscores_uncapped": 94.714,
+    "score_from_rounded_subscores_capped_display": 94.71,
+    "score_from_rounded_subscores_uncapped_display": 94.71,
+    "subscores": {
+      "knives": 94.23682893070648,
+      "yield_rate": 90.09605991337689,
+      "coverage": 99.93999399939995,
+      "time": 100.0
+    },
+    "subscores_uncapped": {
+      "knives": 94.23682893070648,
+      "yield_rate": 90.09605991337689,
+      "coverage": 99.93999399939995,
+      "time": 100.0
+    },
+    "rounded_subscores": {
+      "knives": 94.24,
+      "yield_rate": 90.1,
+      "coverage": 99.94,
+      "time": 100.0
+    },
+    "rounded_subscores_uncapped": {
+      "knives": 94.24,
+      "yield_rate": 90.1,
+      "coverage": 99.94,
+      "time": 100.0
+    },
+    "score_capped_after_penalty": 94.71154834617565,
+    "score_uncapped_after_penalty": 94.71154834617565,
+    "score_from_rounded_subscores_capped_after_penalty": 94.714,
+    "score_from_rounded_subscores_uncapped_after_penalty": 94.714,
+    "score_capped_display_after_penalty": 94.71,
+    "score_uncapped_display_after_penalty": 94.71,
+    "score_from_rounded_subscores_capped_display_after_penalty": 94.71,
+    "score_from_rounded_subscores_uncapped_display_after_penalty": 94.71
+  },
+  "independent_platform_check": {
+    "passed": true,
+    "error_counts": {},
+    "errors": {},
+    "valid_orders": 9999,
+    "excluded_invalid_orders": [
+      "B20270281"
+    ],
+    "source_orders": 10000,
+    "round_count": 10742,
+    "min_physical_length_m": 50.063,
+    "max_physical_length_m": 150.0,
+    "max_round_weight_kg": 59998.52197418974,
+    "official_acceptance_verified": false,
+    "weight_mode": "strict",
+    "round": "semi",
+    "declared_blank_kg": null,
+    "required_blank_kg": null,
+    "weight_check": "conservative pi-based physical round mass including 2m shared trim"
+  },
+  "blank_weight_mode": "strict",
+  "json_file": "D:\\02_Projects\\ML\\jinyinsai1_nolimit\\submission_semi_merged_v2\\复赛结果_鱼不吃猫.json",
+  "zip_file": "D:\\02_Projects\\ML\\jinyinsai1_nolimit\\submission_semi_merged_v2\\复赛结果_鱼不吃猫.zip",
+  "json_sha256": "ab67dd58b719d9fdb1baf0d68207ce84d7a025f3ad63bca4a7a6b4af1fd18a5f",
+  "zip_sha256": "852c9b8498d4205e5e69ce656b22c2389e927490132f5ce5fa367842cf1cb165",
+  "round": "semi",
+  "checks": [
+    "all valid orders exactly once",
+    "integer piece delivery and segment lengths",
+    "steel/diameter homogeneity",
+    "bed length 50..150m",
+    "bed width <=2m",
+    "bed material <=60000kg",
+    "round limit from model",
+    "blank material accounting",
+    "all original physical cutting rounds preserved",
+    "single JSON at ZIP root",
+    "ZIP CRC",
+    "semi: <=6 rounds per scheme",
+    "semi: adjacent rounds per order",
+    "semi: per-order allocated mass >= order weight"
+  ]
+}

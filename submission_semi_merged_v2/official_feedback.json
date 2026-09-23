@@ -1,0 +1,10 @@
+{
+  "source": "AIC 打榜状态查询，2026-09-23 11:12:56 DONE 记录",
+  "sha256": "852c9b8498d4205e5e69ce656b22c2389e927490132f5ce5fa367842cf1cb165",
+  "official_score": 0,
+  "infeasible": true,
+  "violation_type": "跨轮接续不连续",
+  "violation_count": 7030,
+  "penalty_points": 35150,
+  "local_prediction_is_invalid": 94.71154834617565
+}

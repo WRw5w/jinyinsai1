@@ -20,6 +20,36 @@ from platform_score import evaluate as evaluate_platform
 from solver import Config, load_blanks, load_orders, validate_plan
 
 
+def rotate_scheme_rounds(plan):
+    """Close every cross-round seam: round j ends where round j+1 begins.
+
+    The semi-final platform reads a scheme's rounds as one continuous billet
+    stream, so `跨轮接续不连续` fires whenever two rounds share orders but the last
+    order of the earlier round is not the first order of the later one.  Our
+    solver emits every round with the SAME key order (one shared cold-bed set),
+    which satisfies "the same orders" but breaks the seam at 7030 of 7034 seams
+    -- the exact count the platform returned as a 0-point, 35150-penalty
+    `unfeasible` on `submission_semi_merged_v2` (2026-09-23).
+
+    Rotating each round's key order onto its successor's first order fixes every
+    seam at zero cost: the (order -> length) multiset in each round is unchanged,
+    so knives / yield / coverage are identical (verified: 94.71154834617565 both
+    before and after, to the last digit the score consumes).
+    """
+    for batch in plan:
+        rounds = batch.get('length_scheme') or []
+        orders = [list(r) for r in rounds]
+        for j in range(len(orders) - 2, -1, -1):
+            want = orders[j + 1][0]
+            cur = orders[j]
+            if want in cur:
+                k = cur.index(want)
+                orders[j] = cur[k + 1:] + cur[:k + 1]
+        batch['length_scheme'] = [{oid: rounds[j][oid] for oid in orders[j]}
+                                  for j in range(len(orders))]
+    return plan
+
+
 def merge_compatible(plan, orders, max_rounds):
     """Bin-pack whole existing schemes; every original cutting round is preserved."""
     lookup = {o.oid: o for o in orders}
@@ -92,6 +122,14 @@ def build(args):
     rule = 'per_round' if mode == 'strict' else mode
     before = validate_plan(source, orders, cfg, blanks, blank_rule=rule)
     plan = merge_compatible(source, orders, cfg.max_rounds)
+    # `跨轮接续不连续`: the platform reads a scheme's rounds as one continuous
+    # billet stream, so round j must END on round j+1's FIRST order.  Every round
+    # of a scheme carries the same shared cold-bed set, so a rotation to close
+    # each seam is free -- the (order -> length) multiset per round is untouched.
+    # Pinned by the 2026-09-23 official 0-point feedback (7030 violations); see
+    # diagnostics/fix_continuity_order.py.
+    if round_name == 'semi':
+        plan = rotate_scheme_rounds(plan)
     after = validate_plan(plan, orders, cfg, blanks, blank_rule=rule)
     independent = check(plan, data=Path(getattr(args, 'data', 'data')), weight_mode=mode,
                         round=round_name)

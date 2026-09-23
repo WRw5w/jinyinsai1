@@ -109,7 +109,15 @@ def main():
             validate_plan(plan, chunk, cfg, blanks)
             repaired += 1
             print(f'  @{off:06d} repaired ({info})', flush=True)
-        (group_dir / '_failed.json').unlink(missing_ok=True)
+        # Same guard as `solve_semi.main`: retire the note by RENAMING rather than
+        # deleting.  The sandbox's safe-delete guard terminates the process outright
+        # (`SAFE_DELETE_BULK_GUARD_ERROR state lock timeout`), so a repair pass must not
+        # depend on a delete succeeding.
+        try:
+            (group_dir / '_failed.json').replace(group_dir / '_failed.retired.json')
+        except OSError as exc:                                        # noqa: BLE001
+            print(f'  could not retire _failed.json ({type(exc).__name__}: {exc})',
+                  flush=True)
 
     print(f'\nrepaired {repaired}/{attempted} chunks')
 

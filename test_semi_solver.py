@@ -24,6 +24,7 @@ import unittest
 
 from solver import (Blank, Config, ModelError, Order, brute_force, search_10s,
                     validate_plan)
+from solve_semi import AnchorOffsets, order_info
 
 LINEAR = math.pi * (20 / 1000) ** 2 / 4 * 7850
 
@@ -135,9 +136,12 @@ class SemiSolverTests(unittest.TestCase):
         orders = [order("H", 4)]
         with self.assertRaisesRegex(ModelError, "Order mass floor violated"):
             validate_plan([scheme([{"H": 2.0}], ["H"], parallel=[2])], orders, cfg, self.blanks)
-        # With the switch off the same plan fails later, on the piece demand.
+        # With the switch off the same plan fails later, on the piece demand.  The
+        # expected text tracks `solver.validate_plan`, which reports
+        # `Demand violation for H: 2 < 4`; the older `Demand/overproduction` phrasing
+        # (with its allowed range) only survives in `legacy/platform_before_fix/`.
         relaxed = semi_cfg(max_rounds=10, enforce_order_mass_floor=False)
-        with self.assertRaisesRegex(ModelError, "Demand/overproduction"):
+        with self.assertRaisesRegex(ModelError, "Demand violation"):
             validate_plan([scheme([{"H": 2.0}], ["H"], parallel=[2])], orders, relaxed, self.blanks)
 
     def test_brute_force_produces_a_continuity_safe_plan(self):
@@ -166,6 +170,60 @@ class SemiSolverTests(unittest.TestCase):
         too_many = [scheme([{"A": 2.0}] * 7, ["A"])]
         with self.assertRaisesRegex(ModelError, "Invalid round count"):
             validate_plan(too_many, orders, cfg, self.blanks)
+
+
+class AnchorOffsetTests(unittest.TestCase):
+    """`AnchorOffsets` must split a plan's totals exactly between a chunk and the rest.
+
+    The offsets it returns are what a chunk is told the REST of the drop contributes, so
+    the failure mode is silent and expensive: return `whole - rest` instead of `rest` and
+    the annealer is handed a few hundred knives where it expected ~175,000, which makes
+    every knife it could buy look ~200x too expensive and freezes the search.  That
+    inversion was written first and caught only by the identity below, so it is asserted
+    directly rather than inferred from a score.
+    """
+    PLAN = [
+        # Shared scheme: two orders in one round, so both count as covered.
+        dict(orders=["o1", "o2"], length_scheme=[{"o1": 6.0, "o2": 5.0}], counts=[4],
+             blank_type=3, blank_counts=[1]),
+        # Single-order scheme: covered by nobody.
+        dict(orders=["o3"], length_scheme=[{"o3": 5.0}], counts=[3],
+             blank_type=4, blank_counts=[2]),
+    ]
+
+    def setUp(self):
+        self.orders = [order("o1", 10, size=2.0), order("o2", 8, size=2.5),
+                       order("o3", 6, size=2.0, dia=25), order("o4", 12, size=2.0)]
+        self.info = order_info(self.orders)
+        self.anchor = AnchorOffsets(self.PLAN, self.info, {3: 1000.0, 4: 1500.0})
+
+    def test_offsets_are_the_background_not_the_chunk(self):
+        """The regression guard: 3 knives are the OTHER batch, 6 are this one's."""
+        offsets = self.anchor.offsets([self.orders[0]])          # o1 -> batch B only
+        self.assertEqual(offsets["knives"], 3.0)                 # not 175731-style whole-3
+        self.assertEqual(offsets["covered"], 0.0)                # batch B has no shared round
+        self.assertEqual(offsets["raw"], 3000.0)                 # 2 blanks x 1500 kg
+
+    def test_offset_plus_chunk_reproduces_the_whole(self):
+        whole = self.anchor.whole
+        for chunk in ([o] for o in self.orders):
+            touched = {pos for o in chunk for pos in self.anchor.index.get(o.oid, ())}
+            seen = self.anchor.metrics([b for pos, b in enumerate(self.PLAN)
+                                        if pos in touched])
+            offsets = self.anchor.offsets(chunk)
+            for name in whole:
+                self.assertAlmostEqual(offsets[name] + seen[name], whole[name], places=9,
+                                       msg=f"{name} does not close for {chunk[0].oid}")
+
+    def test_an_order_outside_the_anchor_sees_the_whole_anchor(self):
+        """o4 is in no batch, so its background is everything -- full offsets."""
+        self.assertEqual(self.anchor.offsets([self.orders[3]]), self.anchor.whole)
+
+    def test_whole_matches_the_platform_conventions(self):
+        # Batch A: floor(6.0/2.0) + floor(5.0/2.5) + 1 = 3 + 2 + 1; B: floor(5.0/2.0) + 1.
+        self.assertEqual(self.anchor.whole["knives"], 6.0 + 3.0)
+        self.assertEqual(self.anchor.whole["covered"], 2.0)      # o1, o2 only
+        self.assertEqual(self.anchor.whole["raw"], 1000.0 + 3000.0)
 
 
 if __name__ == "__main__":
