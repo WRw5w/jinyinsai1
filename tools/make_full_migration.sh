@@ -112,19 +112,22 @@ python -X utf8 -m unittest test_semi_solver test_solver test_semi_check test_pla
 # 期望：43 tests OK
 
 python -X utf8 diagnostics/verify_clause6_readings.py
-# 期望两行 OK：
+# 期望三行 OK：
 #   OK: reading B reproduces the official 7030; reading C does not.
 #   OK: every package's .zip and .json agree (no stale copy can ship).
+#   OK: every validation report cites the sha256 of its ZIP.
 ```
 
-这两条是这次迁移**最重要的自检**：
+## 五、⛔ 提交前必读：条款 6 有一个未决风险
 
-1. 第一条确认你的环境仍能复现官方的 7030 违规锚点，即确认你没有把 clause 6
-   的判据改错成另一个方向（改错会让你把 0 分包当成满分包交上去）。
-2. 第二条确认每个交付目录里 `.zip` 与 `.json` 一致 —— **上传用的是 `.zip`，
-   漂移的 `.json` 是个 0 分陷阱**（已经有 3 个目录踩过）。
+**自检全绿 ≠ 平台会接受。** 上面的自检只覆盖了读法 B。条款 6 的主语是
+「同一订单」，存在一个更严格的读法，**现有证据无法排除它**。
 
-细节见 `MIGRATION.md` §3.5.1 与 §3.5.2。
+**在该风险关闭前不要提交任何包。** 读：
+
+- `diagnostics/clause6_OPEN_RISK_20260923.md` —— 风险、缺口清单、需要的判别实验
+- `diagnostics/clause6_predicate_resolved_20260923.md` —— 已确证的部分
+  （`集合相同` 判据是错的，这一条可靠）
 NOTE
 
 echo "==> packaging"

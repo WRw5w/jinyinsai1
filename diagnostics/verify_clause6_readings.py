@@ -10,7 +10,9 @@ Exit code is non-zero if the 7030 anchor stops being reproduced by reading B.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -52,7 +54,39 @@ def load(path: Path):
     return json.loads(path.read_text(encoding='utf-8'))
 
 
-def zip_json_mismatches(root: Path) -> list[str]:
+def report_hash_mismatches(root: Path) -> list[str]:
+    """Each package's validation report must cite the hash of the ZIP on disk.
+
+    When a repair rebuilds the ZIP but not the report, the report describes an
+    artifact that no longer exists.  That is worse than having no report: it
+    looks like evidence while certifying nothing, and it invites shipping an
+    unvalidated package.  It happened on 2026-09-23 -- merged_v2's report still
+    said 852c9b84... while the ZIP had become 49862fc7... -- so it is checkable.
+
+    Regenerate with `python -X utf8 tools/resync_reports.py --all`.
+    """
+    bad: list[str] = []
+    for d in sorted(root.glob('submission_semi_*')):
+        if not d.is_dir():
+            continue
+        zips = list(d.glob('*.zip'))
+        if not zips:
+            continue
+        actual = hashlib.sha256(zips[0].read_bytes()).hexdigest()
+        report = None
+        for cand in ('validation_report.json', 'validation_report_source.json'):
+            if (d / cand).exists():
+                report = d / cand
+                break
+        if report is None:
+            bad.append(f'{d.name}: has a ZIP but no validation report')
+            continue
+        cited = re.findall(r'[0-9a-f]{64}', report.read_text(encoding='utf-8'))
+        if actual not in cited:
+            bad.append(f'{d.name}: report cites {cited[:1] or ["nothing"]} but the '
+                       f'ZIP is {actual[:16]}... -- rerun tools/resync_reports.py')
+    return bad
+
     """A deliverable directory holds the SAME plan twice: a `.json` and a `.zip`.
 
     The `.zip` is what gets uploaded.  If the two drift apart (a repair applied
@@ -87,6 +121,37 @@ def rounds_of(plan):
     for batch in plan:
         if isinstance(batch, dict):
             yield batch.get('length_scheme') or []
+
+
+def zip_json_mismatches(root: Path) -> list[str]:
+    """A deliverable directory holds the SAME plan twice: a `.json` and a `.zip`.
+
+    The `.zip` is what gets uploaded.  If the two drift apart (a repair applied
+    to the zip but not the json, say), a future run can pick up the stale .json
+    and ship a package that scores zero.  That actually happened on 2026-09-23:
+    three of four repaired packages still had violating .json copies.  Report
+    every directory where they disagree.
+    """
+    bad: list[str] = []
+    for d in sorted(root.glob('submission_semi_*')):
+        if not d.is_dir():
+            continue
+        zips = list(d.glob('*.zip'))
+        jsons = [p for p in d.glob('*.json')
+                 if not any(s in p.name for s in SKIP_IN_NAME)]
+        if not zips or not jsons:
+            continue
+        try:
+            zplan = load(zips[0])
+            jplan = json.loads(jsons[0].read_text(encoding='utf-8'))
+            if not isinstance(jplan, list):
+                continue
+        except Exception:                              # noqa: BLE001
+            continue
+        if reading_B(zplan) != reading_B(jplan):
+            bad.append(f'{d.name}: zip B={reading_B(zplan)} but '
+                       f'json B={reading_B(jplan)} -- stale .json, resync it')
+    return bad
 
 
 def reading_B(plan) -> int:
@@ -169,6 +234,16 @@ def main() -> int:
             print(f'  - {line}')
         return 1
     print('OK: every package\'s .zip and .json agree (no stale copy can ship).')
+
+    # A report must certify the bytes that will actually be uploaded.
+    print()
+    stale = report_hash_mismatches(ROOT)
+    if stale:
+        print('FAIL: validation reports do not match the ZIP on disk:')
+        for line in stale:
+            print(f'  - {line}')
+        return 1
+    print('OK: every validation report cites the sha256 of its ZIP.')
     return 0
 
 

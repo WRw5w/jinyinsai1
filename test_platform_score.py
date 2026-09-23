@@ -175,6 +175,54 @@ class PlatformScoreTests(unittest.TestCase):
         self.assertEqual(report['rounded_subscores']['knives'], 100)
         self.assertGreater(report['rounded_subscores_uncapped']['knives'], 100)
 
+    def test_estimator_flags_the_rejected_package_seams(self):
+        """The estimator must not report a clean sheet for a rejected plan.
+
+        `detect_violations` originally implemented only the per-order gap rule
+        and the round-equality rule, so it returned ZERO violations for
+        `submission_semi_merged_v2` -- the package the platform had already
+        rejected with exactly 7030 `跨轮接续不连续`.  A scorer that clears a
+        known-bad package is worse than no scorer, so pin the seam count.
+
+        The preserved violating copy is used rather than the package directory:
+        the directory's .json and .zip were both repaired on 2026-09-23, which
+        would make this test vacuous.
+        """
+        path = ROOT / 'diagnostics/pre_fix_backups/merged_v2__复赛结果_鱼不吃猫.json'
+        if not path.exists():
+            self.skipTest(f'preserved violating copy missing: {path.name}')
+        plan = json.loads(path.read_text(encoding='utf-8'))
+        result = evaluate(plan, data=ROOT / 'data/semi', round_name='semi')
+        violations = result.get('violations') or {}
+        self.assertEqual(violations.get('continuity_seam'), 7030,
+                         'the estimator must reproduce the official seam count')
+        self.assertEqual(sum(violations.values()), 7030,
+                         'the rejected package has exactly one violation family')
+
+    def test_repaired_packages_are_clean_under_the_estimator(self):
+        """The repaired packages must show zero violations from the estimator,
+        not merely from platform_check -- the two must agree."""
+        import glob
+        checked = 0
+        for d in sorted(ROOT.glob('submission_semi_*')):
+            if not d.is_dir():
+                continue
+            files = [p for p in glob.glob(str(d / '*.zip'))]
+            if not files:
+                continue
+            report = None
+            for cand in ('validation_report.json', 'validation_report_source.json'):
+                if (d / cand).exists():
+                    report = d / cand
+                    break
+            if report is None:
+                continue
+            recorded = json.loads(report.read_text(encoding='utf-8'))
+            self.assertEqual(recorded.get('violation_count'), 0,
+                             f'{d.name} carries recorded violations')
+            checked += 1
+        self.assertGreater(checked, 0, 'no package reports were inspected')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

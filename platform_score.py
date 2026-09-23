@@ -249,6 +249,24 @@ def detect_violations(plan, context, rules):
                 js = sorted(js)
                 if len(js) > 1 and js != list(range(js[0], js[0] + len(js))):
                     bump('continuity', scheme=a, order=oid, rounds=js)
+        # `跨轮接续不连续` -- the seam rule, kept in lockstep with
+        # platform_check.py.  Without this the estimator reports ZERO violations
+        # on packages the platform has already rejected: the 2026-09-23 notice
+        # rejected submission_semi_merged_v2 with 7030 of these, yet this
+        # function used to return an empty violation map for it, because only
+        # the per-order gap rule above was implemented.
+        #
+        # Predicate (reading B) and why `set(left) == set(right)` is wrong are
+        # documented in platform_check.py; see also
+        # diagnostics/clause6_predicate_resolved_20260923.md.
+        for a, batch in enumerate(plan):
+            rounds = batch.get('length_scheme') or []
+            for j, (left, right) in enumerate(zip(rounds, rounds[1:])):
+                if left and right and set(left) & set(right) \
+                        and next(reversed(left)) != next(iter(right)):
+                    bump('continuity_seam', scheme=a, round=j,
+                         left_last=next(reversed(left)),
+                         right_first=next(iter(right)))
     return violations, detail
 
 
