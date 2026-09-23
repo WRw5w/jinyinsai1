@@ -48,3 +48,11 @@ tmp/
 .idea/
 .DS_Store
 Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Session transcript for the machine migration.  The raw .jsonl is the archival
+# copy of this conversation and the readable .md is derived from it by
+# `tools/render_conversation.py`; both sit at ~55 MB / ~0.7 MB and are transfer
+# payload, not source.  They ship in the migration bundle instead.
+# ---------------------------------------------------------------------------
+conversation/
