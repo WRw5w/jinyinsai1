@@ -26,7 +26,6 @@ AUTO="$MAIN/auto_review"
 OUT="${1:-$NOLIMIT/migration_out}"
 STAGE="$OUT/stage"
 
-rm -rf "$STAGE"
 mkdir -p "$STAGE/repos" "$STAGE/conversation"
 
 echo "==> 1/6 git bundles (full history)"
@@ -67,8 +66,14 @@ git clone repos/jinyinsai1_nolimit.git-bundle jinyinsai1_nolimit
 cd jinyinsai1_nolimit && git checkout semi-final && cd ..
 
 # 共享仓：含另一条交付线的 main 分支
+#
+# 注意：clone 只物化远端 HEAD（main）。`semi-final` 在 bundle 里以
+# `refs/remotes/origin/semi-final` 存在但不会被检出，且 clone 后该
+# remote-tracking ref 也不可用 —— 按 SHA 直接建分支（SHA 见下）：
 git clone repos/jinyinsai1.git-bundle jinyinsai1
-cd jinyinsai1 && git checkout semi-final && cd ..
+cd jinyinsai1
+git checkout -b semi-final 857ab8c7ea1221799a66516c4166688103a92078
+cd ..
 
 # 自动打榜（AIC Leaderboard Control，零第三方依赖的 stdio MCP 服务）
 git clone repos/auto_review.git-bundle auto_review
@@ -107,18 +112,27 @@ python -X utf8 -m unittest test_semi_solver test_solver test_semi_check test_pla
 # 期望：43 tests OK
 
 python -X utf8 diagnostics/verify_clause6_readings.py
-# 期望：末行 "OK: reading B reproduces the official 7030"
+# 期望两行 OK：
+#   OK: reading B reproduces the official 7030; reading C does not.
+#   OK: every package's .zip and .json agree (no stale copy can ship).
 ```
 
-第二条是这次迁移**最重要的一条自检**：它确认你的环境仍能复现官方的
-7030 违规锚点，也就是确认你没有把 clause 6 的判据改错成另一个方向。
-细节见 `MIGRATION.md` §3.5.1。
+这两条是这次迁移**最重要的自检**：
+
+1. 第一条确认你的环境仍能复现官方的 7030 违规锚点，即确认你没有把 clause 6
+   的判据改错成另一个方向（改错会让你把 0 分包当成满分包交上去）。
+2. 第二条确认每个交付目录里 `.zip` 与 `.json` 一致 —— **上传用的是 `.zip`，
+   漂移的 `.json` 是个 0 分陷阱**（已经有 3 个目录踩过）。
+
+细节见 `MIGRATION.md` §3.5.1 与 §3.5.2。
 NOTE
 
 echo "==> packaging"
 rm -f "$OUT/migration-bundle-ALL.zip"
 ( cd "$STAGE" && zip -qr "$OUT/migration-bundle-ALL.zip" . )
-rm -rf "$STAGE"
+# Deliberately NOT deleting $STAGE: the sandbox blocks bulk recursive deletes
+# (>50 files) inside the workspace.  The staging tree is useful anyway -- it is
+# the same content in expanded form.  Remove it by hand if you want it gone.
 
 echo
 echo "==> done"

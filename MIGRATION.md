@@ -116,6 +116,25 @@ python -X utf8 diagnostics/fix_continuity_order.py <包.zip> --out <新包.zip>
 - `diagnostics/verify_clause6_readings.py`（三判据 × 五包对照，含 7030 锚点断言）
 - `evidence/rival_semi_371f209.json`（对方重交版方案，用于交叉验证）
 
+### 3.5.2 ⚠️ `.zip` 与 `.json` 漂移（第二个 0 分陷阱）
+
+每个交付目录同时放着一份 `.json` 和一份 `.zip`，**真实上传的是 `.zip`**。
+修复连续性时只重建了 `.zip`，`.json` 留在旧版：
+
+| 目录 | `.zip`（要交的） | `.json`（曾是旧的） |
+|---|---:|---:|
+| `submission_semi_merged_v2` | 0 | **7030** |
+| `submission_semi_nolimit` | 0 | **7033** |
+| `submission_semi_safety` | 0 | **7559** |
+| `submission_semi_FIXED` | 0 | 0 |
+
+只要能取到旧 `.json` 的路径（脚本、人工、未来重打包）拿到它，交上去就是
+0 分 + 3 万扣分。**已处理**：三份 `.json` 全部重写为对应 `.zip` 内的修复版；
+旧版归档到 `diagnostics/pre_fix_backups/`（同时充当判据 B 的 7030 锚点证据）。
+
+**迁移后请只信 `.zip`**，`.json` 仅作人工查看。`verify_clause6_readings.py`
+已加自动检查，任何目录出现漂移会立刻 FAIL。
+
 ### 教训
 
 1. **本地校验器 ≠ 官方语义**。旧 `platform_check.py` 只查"同订单轮号相邻"，

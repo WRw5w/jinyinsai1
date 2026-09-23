@@ -22,16 +22,21 @@
 
 | 包 | 判据 B | 判据 C | 判据 G | 官方实际 | B 命中? |
 |---|---:|---:|---:|---:|:--:|
-| `submission_semi_merged_v2`（我方，被拒） | **7030** | 6843 | 0 | **7030** | ✅ |
-| `submission_semi_safety`（我方） | 7559 | 7559 | 0 | — | — |
-| `submission_semi_FIXED`（我方，已修） | **0** | 6532 | 0 | 未提交 | — |
-| `submission_semi_nolimit`（我方，已修） | **0** | 0 | 0 | 未提交 | — |
+| `merged_v2` **原始违规版**（我方，被拒） | **7030** | 6843 | 0 | **7030** | ✅ |
+| `semi_safety` **原始违规版** | 7559 | 7559 | 0 | — | — |
+| `submission_semi_FIXED`（已修） | **0** | 6532 | 0 | 未提交 | — |
+| `submission_semi_nolimit`（已修） | **0** | 6880 | 0 | 未提交 | — |
+| `submission_semi_merged_v2`（已修） | **0** | 6843 | 0 | — | — |
 | **对方重交版 `371f209`**（自称 0 违规/93.187） | **6230** | **0** | 0 | 未提交 | ⚠️ |
 
 - 第一行是**唯一有官方数字可对**的行，只有 B 精确复现 7030。C 差 187 ⇒ C 被证伪。
+  （该违规版已归档到 `diagnostics/pre_fix_backups/`，因为包目录里的 `.json`
+  后来被同步成修复版了——见第 8 节。）
 - 第二行解释了对方为何选 C：那个包相邻两轮集合完全相同，B 与 C **重合**，
   样本无区分度，C 侥幸通过检验。
-- 第五行是按 B 的实际后果：对方现包的 6230 条违规**全在 C 的盲区里**。
+- 第六行是按 B 的实际后果：对方现包的 6230 条违规**全在 C 的盲区里**。
+- 注意「已修」各行：**C 会给每一个健康的修复包报出几千条假违规**
+  （6532 / 6880 / 6843），而 B 全给 0。这是 C 过严的那一面。
 
 ## 3. 违规实例（对方包，方案 0）
 
@@ -93,5 +98,34 @@
 
 ```bash
 python -X utf8 -m unittest test_semi_check          # 11 tests，含判据辨析
-python -X utf8 diagnostics/verify_clause6_readings.py   # 三判据扫描
+python -X utf8 diagnostics/verify_clause6_readings.py   # 三判据扫描 + 锚点 + 一致性
 ```
+
+`verify_clause6_readings.py` 现在做三项检查，任一失败返回非 0：
+
+1. 判据 B 必须复现官方的 7030；
+2. 每个交付目录内 `.zip` 与 `.json` 必须同分；
+3. 上面两项都过才输出 `OK`。
+
+## 8. ⚠️ 顺带查出的第二个坑：`.zip` 与 `.json` 漂移
+
+每个交付目录同时放着一份 `.json` 和一份 `.zip`（**真实上传的是 `.zip`**）。
+修复连续性时只重建了 `.zip`，`.json` 还是旧的违规版 —— 于是：
+
+| 目录 | `.zip`（要交的） | `.json`（旧的） |
+|---|---:|---:|
+| `submission_semi_merged_v2` | 0 | **7030** |
+| `submission_semi_nolimit` | 0 | **7033** |
+| `submission_semi_safety` | 0 | **7559** |
+| `submission_semi_FIXED` | 0 | 0 |
+
+**这是会直接导致 0 分的陷阱**：只要能拿到 `.json` 的那条路径（脚本、人工、
+未来某次重打包）取到了旧文件，交上去就是 0 分 + 3 万扣分。
+
+**已处理**：三份 `.json` 全部重写为对应 `.zip` 内的修复版，旧版归档到
+`diagnostics/pre_fix_backups/`（同时作为判据 B 的 7030 锚点证据，因为包目录
+里的副本已被覆盖）。`verify_clause6_readings.py` 加了自动检查，此后任何
+目录出现漂移都会立刻 FAIL。
+
+**给迁移后的建议**：只信 `.zip`；`.json` 仅作人工查看。重打包时
+`build_submission.py` 会同时写两份，不要手改其中一份。

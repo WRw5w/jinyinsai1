@@ -18,8 +18,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # (label, path relative to repo root, official ground truth or None)
+#
+# `merged_v2` MUST point at the preserved violating copy, not at the package
+# directory: as of 2026-09-23 the directory's .json was resynced to the repaired
+# plan, which erases the only evidence we have for predicate B.  The original
+# 7030-violation plan is archived under diagnostics/pre_fix_backups/.
 CASES = [
-    ('merged_v2  (ours, REJECTED)', 'submission_semi_merged_v2', 7030),
+    ('merged_v2  (ours, REJECTED)',
+     'diagnostics/pre_fix_backups/merged_v2__复赛结果_鱼不吃猫.json', 7030),
     ('safety     (ours)',           'submission_semi_safety',    None),
     ('FIXED      (ours, repaired)', 'submission_semi_FIXED',     None),
     ('nolimit    (ours, repaired)', 'submission_semi_nolimit',   None),
@@ -27,11 +33,14 @@ CASES = [
 ]
 
 
+SKIP_IN_NAME = ('validation', 'feedback', 'packed_score')
+
+
 def load(path: Path):
     """Read a plan from a directory of deliverables, or a bare .json file."""
     if path.is_dir():
         cands = [p for p in path.glob('*.json')
-                 if 'validation' not in p.name and 'feedback' not in p.name]
+                 if not any(s in p.name for s in SKIP_IN_NAME)]
         if not cands:
             raise FileNotFoundError(f'no plan json under {path}')
         return json.loads(cands[0].read_text(encoding='utf-8'))
@@ -41,6 +50,37 @@ def load(path: Path):
                         if n.endswith('.json') and 'validation' not in n)
             return json.loads(z.read(name).decode('utf-8'))
     return json.loads(path.read_text(encoding='utf-8'))
+
+
+def zip_json_mismatches(root: Path) -> list[str]:
+    """A deliverable directory holds the SAME plan twice: a `.json` and a `.zip`.
+
+    The `.zip` is what gets uploaded.  If the two drift apart (a repair applied
+    to the zip but not the json, say), a future run can pick up the stale .json
+    and ship a package that scores zero.  That actually happened on 2026-09-23:
+    three of four repaired packages still had violating .json copies.  Report
+    every directory where they disagree.
+    """
+    bad: list[str] = []
+    for d in sorted(root.glob('submission_semi_*')):
+        if not d.is_dir():
+            continue
+        zips = list(d.glob('*.zip'))
+        jsons = [p for p in d.glob('*.json')
+                 if not any(s in p.name for s in SKIP_IN_NAME)]
+        if not zips or not jsons:
+            continue
+        try:
+            zplan = load(zips[0])
+            jplan = json.loads(jsons[0].read_text(encoding='utf-8'))
+            if not isinstance(jplan, list):
+                continue
+        except Exception:                              # noqa: BLE001
+            continue
+        if reading_B(zplan) != reading_B(jplan):
+            bad.append(f'{d.name}: zip B={reading_B(zplan)} but '
+                       f'json B={reading_B(jplan)} -- stale .json, resync it')
+    return bad
 
 
 def rounds_of(plan):
@@ -118,6 +158,17 @@ def main() -> int:
     print('    (C is not an approximation of B -- it is both too wide, missing')
     print('     6230 real violations in the other line\'s package, and too')
     print('     strict, flagging 6532 legal reorderings in ours.)')
+
+    # Deliverable directories carry the plan twice; the .zip is what ships.
+    # Drift between the two is a silent 0-point trap -- see the docstring.
+    print()
+    drift = zip_json_mismatches(ROOT)
+    if drift:
+        print('FAIL: .zip and .json disagree inside these package directories:')
+        for line in drift:
+            print(f'  - {line}')
+        return 1
+    print('OK: every package\'s .zip and .json agree (no stale copy can ship).')
     return 0
 
 
