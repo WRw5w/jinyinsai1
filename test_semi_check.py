@@ -172,6 +172,46 @@ class SemiCheckTests(unittest.TestCase):
         after = [[set(r.items()) for r in b['length_scheme']] for b in fixed]
         self.assertEqual(before, after, 'rotation must not change any round content')
 
+    def test_seam_predicate_is_not_the_weaker_set_equality_rule(self):
+        """Discriminate the two candidate readings of clause 6.
+
+        The only two official numbers we hold are 7030 (our package) and 7559
+        (the other line's).  Reproducing 7030 requires:
+
+            B  intersection non-empty AND last key != first key
+
+        and rejects
+
+            C  set(left) == set(right)
+
+        because C scores the 7030 package at 6843.  C survives the 7559 notice
+        only because that package's adjacent rounds had identical order sets, so
+        B and C coincide there and the sample cannot tell them apart.
+
+        This test constructs exactly that discriminating boundary: rounds whose
+        sets DIFFER but overlap, meeting tail-to-head.  B is clean; C (wrongly)
+        would flag it.  If someone ever "simplifies" the checker to C, this
+        fails.
+        """
+        # Sets differ ({A,B} vs {A,B,C}) yet A is last in round 0 and first in
+        # round 1 -> head-to-tail holds, so B is silent.  (Round 0 must be
+        # written ending on A, not starting on it.)
+        rounds = [{'B': TOTAL_NET / 3, 'A': TOTAL_NET / 3},
+                  {'A': TOTAL_NET / 3, 'B': 0.0, 'C': 0.0}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertIsNone(errs.get('continuity_seam'),
+                          'head-to-tail with different sets must be clean')
+
+        # Same sets and NOT meeting head-to-tail -> B fires (this is the shape
+        # the 7030 notice was made of: tail 0 ends on B, round 1 opens on A).
+        rounds = [{'A': TOTAL_NET / 2, 'B': 0.0},
+                  {'A': TOTAL_NET / 2, 'B': 0.0}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertEqual(errs.get('continuity_seam'), 1,
+                         'identical sets in a broken rotation must be flagged')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

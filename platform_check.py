@@ -217,6 +217,22 @@ def check(plan, data=Path('data'), check_delivery=True, weight_mode='strict',
         # every round satisfies "same orders" but breaks this seam whenever two
         # rounds share orders.  The count here must reproduce the official 7030
         # on that ZIP.
+        #
+        # WHY THIS PREDICATE, AND NOT `set(left) == set(right)`:
+        # three candidate readings of clause 6 were scored against the only two
+        # official numbers we hold.  On the 7030 notice they separate cleanly --
+        #
+        #     B  intersection non-empty AND last key != first key   -> 7030  HIT
+        #     C  set(left) == set(right)                            -> 6843  MISS by 187
+        #     G  an order's rounds are non-adjacent per order       -> ~1e5  MISS by 10x
+        #
+        # -- so B is the platform's rule.  The competing-C package
+        # (jinyinsai1 main @371f209, "violation_count = 0, score 93.187") is
+        # scored by B at 6230 violations and would be rejected: its rounds share
+        # orders without meeting head-to-tail.  C only LOOKS correct on the
+        # earlier 7559 notice because that package's rounds had identical order
+        # sets, where B and C coincide (7559 == 7559) and the sample cannot
+        # discriminate.  Keep B; do not "simplify" it to C.
         for a, batch in enumerate(plan if isinstance(plan, list) else []):
             rounds = batch.get('length_scheme') or []
             for j, (left, right) in enumerate(zip(rounds, rounds[1:])):

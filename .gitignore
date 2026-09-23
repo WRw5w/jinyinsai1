@@ -56,3 +56,10 @@ Thumbs.db
 # payload, not source.  They ship in the migration bundle instead.
 # ---------------------------------------------------------------------------
 conversation/
+
+# ---------------------------------------------------------------------------
+# Machine-migration output.  `migration_out/` holds the git bundles + zips
+# produced by `tools/make_migration_bundle.sh` and `tools/make_full_migration.sh`
+#; it is roughly 40 MB of transfer payload and is rebuilt on demand.
+# ---------------------------------------------------------------------------
+migration_out/
