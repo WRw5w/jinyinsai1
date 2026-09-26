@@ -9,7 +9,7 @@
 | 12 条原始约束 | [constraints.txt](../data/semi/constraints.txt) |
 | 原始 v2=7030 | [official_feedback.json](../artifacts/rejected/submission_semi_merged_v2/official_feedback.json)；对应原上传 ZIP SHA-256 `852c9b8498d4205e5e69ce656b22c2389e927490132f5ce5fa367842cf1cb165` |
 | 原始 v2 JSON | [pre_fix_backups](../evidence/semi/pre_fix_backups/merged_v2__复赛结果_鱼不吃猫.json)；不要拿已旋转版冒充原上传版本 |
-| v4=7342 的记录 | [历史报告入口](archive/README.md)；完整原文在档案同路径。记载 2026-09-26 15:45:18 评分且 attachmentMatches=true；缺原始回读 JSON，需补归档 |
+| v4=7342 的记录 | [official_feedback.json](../artifacts/rejected/submission_semi_merged_v4/official_feedback.json)；2026-09-26 15:45:18 评分，attachmentMatches=true，并附官方定位串前 12 位 |
 | v4 实际 ZIP | `artifacts/rejected/submission_semi_merged_v4/复赛结果_鱼不吃猫.zip`，SHA-256 `97955f360f3ea26c8f501e0d736676aa966b2817943beec8632861eba173bb12` |
 | 官方可行示例 | [PDF](../evidence/rules/AIC竞赛规则.pdf) 第 18–19 页：A20260105→A20260104，下一轮 A20260104 |
 | 初赛校准 | `evidence/20260916/` 的 JSON/ZIP 保留原路径；仅用于历史回归 |

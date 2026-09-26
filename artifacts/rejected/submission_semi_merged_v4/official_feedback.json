@@ -1,0 +1,22 @@
+{
+  "source": "AIC 打榜状态查询，2026-09-26 15:45:18 DONE 记录",
+  "sha256": "97955f360f3ea26c8f501e0d736676aa966b2817943beec8632861eba173bb12",
+  "official_score": 0,
+  "infeasible": true,
+  "violation_type": "跨轮接续不连续",
+  "violation_count": 7342,
+  "penalty_points": 36710,
+  "local_prediction_is_invalid": 95.08702832161678,
+
+  "recorded_from": "自动打榜这次运行的原始报告，D:/new_mcp/auto_submit/auto_submit_20260926-154554.json（该路径被 .gitignore，未随包提交；本文件是它落到证据目录的副本）",
+  "submitted_at": "2026-09-26T15:45:11Z",
+  "evaluated": "2026-09-26 15:45:18",
+  "team": "AIC-2026-93096493",
+  "stage": "semi",
+  "attachment_sha256": "97955f360f3ea26c8f501e0d736676aa966b2817943beec8632861eba173bb12",
+  "attachment_matches": true,
+  "attachment_matches_note": "平台回读的附件哈希与提交的 ZIP 逐字节一致，所以 7342 不是传错包导致的；这一条比 v2 那份回执多，v2 当时没有做附件校验。",
+  "failure_reason_raw": "不可行，总分=0；违规次数：7342条，累计扣分36710分；跨轮接续不连续(7342条)：方案0批0、方案0批1、方案0批2、方案0批3、方案0批4、方案1批0、方案1批1、方案1批2、方案1批3、方案2批0、方案2批1、方案2批2…等7342处",
+  "locator_prefix": "方案0批0、方案0批1、方案0批2、方案0批3、方案0批4、方案1批0、方案1批1、方案1批2、方案1批3、方案2批0、方案2批1、方案2批2",
+  "locator_note": "这 12 个定位是判据比较的关键：候选判据在本包上给出 7342 且前 12 位逐位一致，旧的交界首尾判据在同一个包上给出 0。判据定义见 tools/analysis/clause6_candidate.py。"
+}
