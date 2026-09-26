@@ -1,0 +1,23 @@
+# ---------------------------------------------------------------------------
+# Byte-exact policy: do NOT translate line endings.
+#
+# This repository publishes SHA-256 values for the delivery artifacts
+# (`deliverables_semi/复赛结果_棒材优化.zip` / `.json`) and for the code archive,
+# and `deliverables_semi/复赛代码与模型.zip` is claimed to be byte-reproducible.
+# With the machine default `core.autocrlf=true` and no attributes, git rewrites
+# CRLF<->LF on commit/checkout, which has two consequences a reviewer can hit:
+#
+#   * the byte count of a file in the repository differs from the byte count of
+#     the same file inside the code archive (e.g. `validation_report.json` was
+#     11,084 B in the repo and 11,407 B in the archive);
+#   * `make_code_zip.py` would rebuild a DIFFERENT archive hash on Linux, where
+#     checkout yields LF instead of CRLF.
+#
+# Declaring the tree as non-text (`-text`) stops git from converting anything:
+# what is committed is exactly what `make_code_zip.py` reads and hashes, on any
+# platform.  Diffs stay readable -- git still treats these files as text for
+# diff purposes; only the EOL filter is disabled.
+#
+# The shell scripts' executable bit is irrelevant here (Windows-hosted repo).
+# ---------------------------------------------------------------------------
+* -text
