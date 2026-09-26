@@ -18,23 +18,33 @@ from competition_solver import atomic_json
 from platform_check import check
 from platform_score import evaluate as evaluate_platform
 from solver import Config, load_blanks, load_orders, validate_plan
+from validation_status import uncertified_build_report
 
 
 def rotate_scheme_rounds(plan):
     """Close every cross-round seam: round j ends where round j+1 begins.
 
-    The semi-final platform reads a scheme's rounds as one continuous billet
-    stream, so `跨轮接续不连续` fires whenever two rounds share orders but the last
-    order of the earlier round is not the first order of the later one.  Our
-    solver emits every round with the SAME key order (one shared cold-bed set),
-    which satisfies "the same orders" but breaks the seam at 7030 of 7034 seams
-    -- the exact count the platform returned as a 0-point, 35150-penalty
-    `unfeasible` on `submission_semi_merged_v2` (2026-09-23).
+    ⛔ The reasoning this implements was FALSIFIED on 2026-09-26 and the rotation
+    does not fix anything.  `submission_semi_merged_v4` went through this function,
+    our checker then reported 0 violations, and the platform scored it 0 points for
+    **7342** `跨轮接续不连续` (receipt:
+    `artifacts/rejected/submission_semi_merged_v4/official_feedback.json`).
+    Rotating key order cannot help when a boundary shares more than one order: the
+    candidate predicate requires *every* shared order to sit at both ends of the
+    seam at once, which one rotation cannot arrange.  See
+    `tools/analysis/clause6_candidate.py`.  Kept so the existing rejected packages
+    stay byte-reproducible; do not read it as a repair.
 
-    Rotating each round's key order onto its successor's first order fixes every
-    seam at zero cost: the (order -> length) multiset in each round is unchanged,
-    so knives / yield / coverage are identical (verified: 94.71154834617565 both
-    before and after, to the last digit the score consumes).
+    What it was meant to do: the platform reads a scheme's rounds as one continuous
+    billet stream, so `跨轮接续不连续` fires whenever two rounds share orders but the
+    last order of the earlier round is not the first of the later one.  Our solver
+    emits every round with the SAME key order (one shared cold-bed set), which
+    satisfies "the same orders" but broke that seam -- the platform returned 0 points
+    and a 35150 penalty for it on `submission_semi_merged_v2` (2026-09-23).
+
+    The rotation is still cost-free -- each round's (order -> length) multiset is
+    unchanged, so knives / yield / coverage are identical (verified: 94.71154834617565
+    both before and after) -- it simply does not address the rule the platform applies.
     """
     for batch in plan:
         rounds = batch.get('length_scheme') or []
@@ -207,6 +217,15 @@ def build(args):
                           'all original physical cutting rounds preserved', 'single JSON at ZIP root', 'ZIP CRC']
                          + (['semi: <=6 rounds per scheme', 'semi: adjacent rounds per order',
                              'semi: per-order allocated mass >= order weight'] if round_name == 'semi' else []))
+    # The release gate, not the legacy model, decides what may be submitted.  This
+    # report used to be written straight out, so a freshly built package carried
+    # `independent_platform_check.passed: True` -- a machine-readable approval for a
+    # package the platform scored at zero on 2026-09-26, because that check still
+    # implements the clause-6 reading that submission falsified.  `resync_reports`
+    # applies the same downgrade, so every path that emits a report emits an
+    # uncertified one, and the model's own numbers survive under
+    # `legacy_model_result`.
+    report = uncertified_build_report(report)
     atomic_json(output / 'validation_report.json', report)
     # The note is assembled from the round's own facts rather than a fixed
     # template.  The earlier version hardcoded the preliminary round throughout:
