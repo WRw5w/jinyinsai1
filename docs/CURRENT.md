@@ -39,9 +39,12 @@ v4 刀数 167,748（floor 口径参考）；合规重建后 185,229 —— **重
 - 死路：仅旋转键顺序不能合规（v4 实证）；排序 `orders` 会让官方示例判违规。
 - 额度：每日 5 次（北京时间午夜重置）；结果截止 **10-05 20:00**、代码截止 **10-07 23:59**。
 
-## 工具链注意（2026-09-26 夜发现）
+## 工具链注意（2026-09-26 夜：已定位并修复）
 
-`result-records` 的**附件哈希下载失效**：`download.saveAs: Target page, context or browser has been closed`，
-连续 4/4 复现（v4 那次 15:45 还是好的）。回分主体（分数 + 刀/材/覆 明细）不受影响，仍可读出。
-补录工具：`D:\new_mcp\tools\aic_attribute_score.py`（默认拒绝无哈希行；旁路需
-`--accept-unverified-hash --reason …`，记录内注明 `hash_attestation`）。修复待办。
+`result-records` 的附件哈希下载曾 4/4 失败（`download.saveAs: …browser has been closed`）。
+**根因是 Edge 153 自身**：任何下载开始约 1 秒后崩溃整个浏览器进程（转储指纹一致：
+`EXCEPTION_ACCESS_VIOLATION` @ `msedge.dll+0x9a4cd1b`；换无关宿主同样复现；微软已承认 153 有已知故障）。
+**修复已在 `D:\new_mcp\tools\leaderboard_pipe.mjs` 工作区落地**（未提交）：改由 node 从
+`download.url()` 直接抓取同字节做 SHA-256，端到端验证通过（`attachmentMatches: true`）。
+细节、证据链与备选方案见 [PIPE_ATTACHMENT_EDGE153](PIPE_ATTACHMENT_EDGE153.md)。
+`tools\aic_attribute_score.py` 保留为哈希缺失时的补录旁路。
