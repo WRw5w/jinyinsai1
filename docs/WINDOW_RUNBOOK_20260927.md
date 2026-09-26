@@ -41,8 +41,18 @@
 包路径：`D:\02_Projects\ML\jinyinsai1_nolimit\artifacts\candidates\<候选名>\复赛结果_鱼不吃猫.zip`。
 磁盘上八个包的 sha256 已与队列逐位核对过（2026-09-26 23:40，0 mismatch）。
 
-**预测口径**：官方分 ≈ 本地 + 0.389（官方成材率 = 本地 × 1.0104，四发实测一致）。
-所以①应回 ≈ **92.50**，②应回 ≈ **92.546**，③应回 ≈ **92.544**；子分(刀/材/覆) ≈ 86.7 / 94.6 / 99.9 起。
+**预测口径（2026-09-27 07:15 修正，以①实测为准）**：官方分 ≈ 本地 + **0.0045**；
+官方刀数/成材率/覆盖率与本地投影**逐位相同**（①：184,510 / 93.65 / 99.85 三项全等）。
+旧的“官方 ≈ 本地 + 0.389（材 × 1.0104）”是**旧包本地投影的伪影**，已作废：
+① 本地 92.1155 → 官方 **92.12**（旧口径会猜 92.50，实测证伪）。
+据此② local 92.1572 → 应回 ≈ **92.16**，③ 92.1554 → ≈ **92.16**；④⑤ 同理 ≈ 本地 + 0.005。
+判据仍是 ≥92.0 即照表发（①=92.12 已满足）。
+
+**实发记录（每发后更新）**：
+
+| 跳 | 点击(北京) | 出分(北京) | 官方分 | 刀/材/覆 | 与本地差 | 备注 |
+|---|---|---|---|---|---|---|
+| ① | 07:06:05 | 07:06:22 | **92.12** | 184,510 / 93.65 / 99.85 | +0.0045 | 附件哈希核验通过（699c0e8a…，126,946 B） |
 
 ## 每一发的调用序列
 
@@ -52,6 +62,35 @@
                    confirm_real_submit=true)            # 守卫→浏览器→校验→入队→点提交→轮询→记分
 3) aic_submission_ledger(stage="semi")                  # 1–10 分钟后取分
    aic_queue_status()                                   # 该候选 status=scored 且带 score
+
+**取分修正（2026-09-27 07:15，①实测）**：MCP 的自动取分步骤**必定失败**——管道按
+`fields["参赛编号"] === AIC_LEADERBOARD_TEAM_ID` 过滤行，而 `aic_auto_submit(team="鱼不吃猫")`
+把队名当编号传下去，匹配不到任何行（症状 `no_result_payload` / `no_matching_result`）。
+每次提交后用下面两步手工取分：
+
+```bash
+cd /d/new_mcp && AIC_LEADERBOARD_CHROME_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
+  AIC_LEADERBOARD_RECORDS_URL="https://reg.aicomp.cn/app/JSGLPT/65b75207a58fdc32c79e9842" \
+  AIC_LEADERBOARD_ROOT="D:/new_mcp" AIC_LEADERBOARD_TEAM_ID=AIC-2026-93096493 \
+  AIC_LEADERBOARD_STAGE=semi AIC_LEADERBOARD_EXPECTED_SHA256=<包的sha256> \
+  node tools/leaderboard_pipe.mjs result-records > /tmp/raw_<跳>.json
+```
+
+成功的标志：`record.status="DONE"`、`record.attachmentMatches=true` 且 `attachmentSha256`
+等于本跳包的哈希。然后把 `record.team` 这**一个**字段改成 `鱼不吃猫`（台账行的字段值），
+另存 `/tmp/norm_<跳>.json`，回填（工具先备份台账与队列；哈希已核验，无需
+`--accept-unverified-hash`）：
+
+```bash
+cd /d/new_mcp && ./.venv/Scripts/python.exe -X utf8 tools/aic_attribute_score.py \
+  --root D:/new_mcp --stage semi --team 鱼不吃猫 \
+  --row-json "$(cygpath -w /tmp/norm_<跳>.json)" --apply
+```
+
+成功标志：输出 `"applied": true`、`"ledgerBest": 92.xx`、`closedQueueIds` 含本跳 id。
+注意：只能用它自己的 venv python（`D:\new_mcp\.venv\Scripts\python.exe`）；PATH 上的
+`python` 是 WindowsApps 假壳，会静默 exit 49。python 参数里的路径要用 `cygpath -w` 转成
+Windows 形式，bash 重定向路径用 `/tmp/...` 即可。
 ```
 
 - 浏览器会由管道自己拉起（对战 Chrome）。若它要求人工登录而无人可登：**停下**，把现象写清楚，
