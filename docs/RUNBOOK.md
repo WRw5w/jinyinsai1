@@ -37,9 +37,8 @@ FAIL: test_relocated_competition_artifacts_keep_original_bytes (path='data/blank
 
 **这不是回归**，是旧工作区没跟着 `.gitattributes` 重新签出。修法：
 
-> ⚠️ 下面的 `git checkout -- .` **会丢弃未提交的改动**。先确认 `git status` 里除了那些
-> `data/`、`evidence/` 文件之外没有别的东西（我自己第一次执行时就把一处未提交的文档编辑
-> 一起还原掉了）。有别的改动就先提交或 stash。
+> ⚠️ 下面的 `git checkout -- .` **会丢弃未提交的改动**：先确认 `git status` 里除了那些
+> `data/`、`evidence/` 文件之外没有别的东西，否则先提交或 stash。
 
 ```bash
 git update-index --refresh   # 旧索引缓存会让 git 误报“干净”，先让它重新核对
