@@ -312,6 +312,27 @@ sha256 `562747594a78de8ea230aac43741b3073a2cccc56c87bafef140bca241a49876`，本�
 `cand_cy1`（92.1572，2,275 批）；第三遍净变化 0。`cyc` 的全部增益来自其中第二条命令
 （`[M,X,Q,S]` 阶段，两轮 −26,149 kg），其余阶段 `cost_delta` 都是 0。
 
+**这条链现在是仓库里的 tracked 工具**（09-27 凌晨落地，代码截止前可复现的获胜配方）：
+
+```bash
+.venv/Scripts/python.exe aic.py trajectory runs/_iter11.json --order QSR --passes 2 \
+  --output runs/_repro.json --stats runs/_repro.stats.json
+```
+
+`tools/analysis/trajectory.py` 把 `--order` 展开成**累积前缀阶段**（`[M,X,Q]` → `[M,X,Q,S]` →
+`[M,X,Q,S,R]`），每阶段**迭代到自己的 `cost_delta` 为 0**，再跑重打包 → 全 flag → 共享 → 全 flag 级联，
+整个轨迹跑 `--passes` 遍；每阶段的中间产物、`reps`、`delta` 写进 `--stats`，最终分低于输入分就删掉输出并以
+非零码退出。`tests/test_trajectory.py`（14 例）钉住阶段展开、四类停止规则（keep-input / 零 delta /
+无 delta 工具分数走平 / `--max-reps` 上限）与"不得低于输入"的守门。
+
+**09-27 凌晨复核结论**：(a) **命令行上的 flag 顺序不影响结果**——`--requant-cuts --split-schemes
+--recount-rounds` 与 `--… --recount-rounds --split-schemes` 两种写法产出**同哈希**
+（`0a66a8dbc2cddd24…`），因为 `shift_cuts` 内部按固定顺序执行各相，命令行只开关；
+(b) **"每阶段迭代到不动点"不是可选项**：`_tqsplit2.json` 单独跑一次第 3 阶段只到 92.1135（10,214 轮），
+再迭代两轮（−112,022 kg、−4,072 kg）才落在 92.1215，其产物与第一次的 `runs/_tqsplit3.json`
+**逐字节相同**（`01d830d052e7fca4…`，10,215 轮 / 2,280 批）——即一次调用可能离该阶段的不动点还差
+0.008 分，级联里"一阶段一跑"的写法会漏掉它。
+
 ## 结构性天花板
 
 - 剩余 **95,084 片（≈5.8M kg）在当前工具集下花不动**：每个订单余量中位数只有 18 片，
