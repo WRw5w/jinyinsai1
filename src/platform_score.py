@@ -249,24 +249,35 @@ def detect_violations(plan, context, rules):
                 js = sorted(js)
                 if len(js) > 1 and js != list(range(js[0], js[0] + len(js))):
                     bump('continuity', scheme=a, order=oid, rounds=js)
-        # `跨轮接续不连续` -- the seam rule, kept in lockstep with
-        # platform_check.py.  Without this the estimator reports ZERO violations
-        # on packages the platform has already rejected: the 2026-09-23 notice
-        # rejected submission_semi_merged_v2 with 7030 of these, yet this
-        # function used to return an empty violation map for it, because only
-        # the per-order gap rule above was implemented.
+        # `跨轮接续不连续` -- the seam rule.  Deliberately a separate copy of the
+        # one in platform_check.py rather than a shared import: the checker is
+        # meant to re-derive everything from the raw CSVs so a bug in one cannot
+        # hide behind the other.  tests/test_clause6_anchors.py pins both against
+        # the official notices, which is what actually catches drift -- keeping
+        # them "in lockstep" by hand did not, because both were written to the
+        # same wrong predicate and agreed with each other while disagreeing with
+        # the platform.
         #
-        # Predicate (reading B) and why `set(left) == set(right)` is wrong are
-        # documented in platform_check.py; see also
-        # diagnostics/clause6_predicate_resolved_20260923.md.
+        # PREDICATE (candidate, 2026-09-26): every order shared by rounds j and
+        # j+1 must be simultaneously the last key of the left round and the first
+        # key of the right one.  Two or more shared orders make that impossible,
+        # so such a boundary always counts -- once per BOUNDARY, matching how the
+        # official notices count (7030 / 7342 / 7559 are seams, not orders).
+        #
+        # Rationale, the four anchors and the falsified predecessor are documented
+        # at length in platform_check.py; the reference implementation is
+        # tools/analysis/clause6_candidate.py.
         for a, batch in enumerate(plan):
             rounds = batch.get('length_scheme') or []
             for j, (left, right) in enumerate(zip(rounds, rounds[1:])):
-                if left and right and set(left) & set(right) \
-                        and next(reversed(left)) != next(iter(right)):
-                    bump('continuity_seam', scheme=a, round=j,
-                         left_last=next(reversed(left)),
-                         right_first=next(iter(right)))
+                if not (left and right):
+                    continue
+                last, first = next(reversed(left)), next(iter(right))
+                offenders = sorted(oid for oid in set(left) & set(right)
+                                   if oid != last or oid != first)
+                if offenders:
+                    bump('continuity_seam', scheme=a, round=j, orders=offenders,
+                         left_last=last, right_first=first)
     return violations, detail
 
 

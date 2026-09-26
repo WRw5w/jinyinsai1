@@ -209,37 +209,48 @@ def check(plan, data=Path('data'), check_delivery=True, weight_mode='strict',
                 js = sorted(js)
                 if len(js) > 1 and js != list(range(js[0], js[0] + len(js))):
                     error('continuity', order=oid, scheme=a, rounds=js)
-        # `跨轮接续不连续` -- STRICTER than round adjacency, pinned by the
-        # 2026-09-23 official feedback on submission_semi_merged_v2 (0 points,
-        # 7030 violations, 35150 penalty).  The platform reads a scheme's rounds
-        # as one continuous billet stream, so the LAST order cut in round j must
-        # be the FIRST order cut in round j+1.  Emitting the same key order in
-        # every round satisfies "same orders" but breaks this seam whenever two
-        # rounds share orders.  The count here must reproduce the official 7030
-        # on that ZIP.
+        # `跨轮接续不连续` -- the seam rule.
         #
-        # WHY THIS PREDICATE, AND NOT `set(left) == set(right)`:
-        # three candidate readings of clause 6 were scored against the only two
-        # official numbers we hold.  On the 7030 notice they separate cleanly --
+        # PREDICATE (candidate, 2026-09-26): at a boundary between rounds j and
+        # j+1, EVERY order present in both rounds must sit at the seam -- that is,
+        # each shared order must be simultaneously the last key of the left round
+        # and the first key of the right one.  With two or more shared orders that
+        # is impossible, so such a boundary always counts.  Counted once per
+        # BOUNDARY, never once per order: every official notice counts seams
+        # (7030, 7342, 7559), not orders.
         #
-        #     B  intersection non-empty AND last key != first key   -> 7030  HIT
-        #     C  set(left) == set(right)                            -> 6843  MISS by 187
-        #     G  an order's rounds are non-adjacent per order       -> ~1e5  MISS by 10x
+        # This replaced an earlier predicate that only compared the left round's
+        # last key with the right round's first key.  That one reproduced 7030 but
+        # ignored the other shared orders, and the 2026-09-26 submission proved it
+        # wrong: `submission_semi_merged_v4` was key-rotated until the old rule
+        # reported 0, and the platform still returned 0 points for 7342
+        # `跨轮接续不连续`.  Key rotation cannot satisfy this predicate, because
+        # aligning one shared order leaves the others misaligned.
         #
-        # -- so B is the platform's rule.  The competing-C package
-        # (jinyinsai1 main @371f209, "violation_count = 0, score 93.187") is
-        # scored by B at 6230 violations and would be rejected: its rounds share
-        # orders without meeting head-to-tail.  C only LOOKS correct on the
-        # earlier 7559 notice because that package's rounds had identical order
-        # sets, where B and C coincide (7559 == 7559) and the sample cannot
-        # discriminate.  Keep B; do not "simplify" it to C.
+        # Four official observations pin it, all exact, plus the worked example in
+        # the rules PDF which must score 0:
+        #
+        #     submission_semi_merged_v2 (2026-09-23 notice)      7030 -> 7030
+        #     submission_semi_safety    (recorded notice)        7559 -> 7559
+        #     submission_semi_nolimit   (recorded notice)        7033 -> 7033
+        #     submission_semi_merged_v4 (2026-09-26 notice)      7342 -> 7342
+        #
+        # The competing `set(left) == set(right)` reading misses all four.  The
+        # reference implementation with its own tests is
+        # tools/analysis/clause6_candidate.py; this copy stays independent of it on
+        # purpose, and tests/test_clause6_anchors.py asserts both agree with the
+        # notices, so the two cannot drift apart unnoticed.
         for a, batch in enumerate(plan if isinstance(plan, list) else []):
             rounds = batch.get('length_scheme') or []
             for j, (left, right) in enumerate(zip(rounds, rounds[1:])):
-                if left and right and set(left) & set(right) \
-                        and next(reversed(left)) != next(iter(right)):
-                    error('continuity_seam', scheme=a, round=j,
-                          left_last=next(reversed(left)), right_first=next(iter(right)))
+                if not (left and right):
+                    continue
+                last, first = next(reversed(left)), next(iter(right))
+                offenders = sorted(oid for oid in set(left) & set(right)
+                                   if oid != last or oid != first)
+                if offenders:
+                    error('continuity_seam', scheme=a, round=j, orders=offenders,
+                          left_last=last, right_first=first)
     for oid, order in orders.items():
         if used[oid] != 1:
             error('order_coverage', order=oid, occurrences=used[oid])

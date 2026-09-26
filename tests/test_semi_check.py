@@ -127,90 +127,90 @@ class SemiCheckTests(unittest.TestCase):
         self.assertEqual(result['source_orders'], 3)
 
     def test_cross_round_seam_continuity(self):
-        """Round j must END on round j+1's FIRST order (`跨轮接续不连续`).
+        """Every order shared by adjacent rounds must sit at the seam.
 
-        Pinned by the 2026-09-23 official 0-point feedback on
-        `submission_semi_merged_v2`: 7030 violations, 35150 penalty, `unfeasible`.
-        Emitting the same key order in every round (what the solver used to do)
-        satisfies "same orders in adjacent rounds" but fails this seam.
+        A BOUNDARY counts once however many shared orders fail, because that is
+        how the official notices count: 7030 / 7342 / 7559 are seams, not orders.
+        Pinned by the 2026-09-23 notice on `submission_semi_merged_v2` (0 points,
+        35150 penalty) and the 2026-09-26 notice on the rotated `_v4` (0 points,
+        36710 penalty).
         """
-        # Same two orders in both rounds, same order -> 1 seam violation.
+        # Two shared orders: both would have to be at the seam at once -> 1.
         rounds = [{'A': TOTAL_NET / 2, 'B': 0.0}, {'A': TOTAL_NET / 2, 'B': 0.0}]
         plan = clean_plan(rounds)
         errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
         self.assertEqual(errs.get('continuity_seam'), 1)
 
-        # Rotate round 0 so it ends on round 1's first order -> clean.
-        rounds = [{'B': 0.0, 'A': TOTAL_NET / 2}, {'A': TOTAL_NET / 2, 'B': 0.0}]
+        # Exactly one shared order, sitting at the seam -> clean.
+        rounds = [{'A': TOTAL_NET / 2, 'B': TOTAL_NET / 2}, {'B': TOTAL_NET / 2}]
         plan = clean_plan(rounds)
         errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
         self.assertIsNone(errs.get('continuity_seam'))
 
-        # Rounds with no shared order are unconstrained: A only, then B only.
-        # (Round 0 has A, round 1 has B, so no seam exists.)
-        rounds = [{'A': TOTAL_NET, 'B': 0.0}, {'B': TOTAL_NET, 'A': 0.0}]
+        # One shared order, but the right round opens on something else -> 1.
+        rounds = [{'B': TOTAL_NET / 2, 'A': TOTAL_NET / 2}, {'B': TOTAL_NET / 2}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertEqual(errs.get('continuity_seam'), 1)
+
+        # No shared order at all: nothing to align -> clean.
+        rounds = [{'A': TOTAL_NET / 2}, {'B': TOTAL_NET / 2}]
         plan = clean_plan(rounds)
         errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
         self.assertIsNone(errs.get('continuity_seam'))
 
-    def test_rotate_scheme_rounds_closes_every_seam(self):
-        """The packaging helper must turn a violating plan into a clean one
-        WITHOUT touching any (order -> length) pair in any round."""
+    def test_rotate_scheme_rounds_does_not_close_a_seam(self):
+        """The key-rotation helper does NOT repair clause 6, and never did.
+
+        It was believed to close every seam at zero cost.  It cannot: a boundary
+        sharing two orders needs BOTH at the seam simultaneously, and rotating
+        moves one of them.  `submission_semi_merged_v4` went through this helper,
+        our checker then reported 0, and the platform returned 0 points for 7342
+        `跨轮接续不连续`.  The helper survives only so the rejected packages stay
+        byte-reproducible -- see the receipt at
+        artifacts/rejected/submission_semi_merged_v4/official_feedback.json.
+        """
         from build_submission import rotate_scheme_rounds
 
         rounds = [{'A': TOTAL_NET / 2, 'B': 0.0},
-                  {'A': TOTAL_NET / 2, 'B': 0.0},
-                  {'A': 0.0, 'B': TOTAL_NET / 2}]
+                  {'A': TOTAL_NET / 2, 'B': 0.0}]
         plan = clean_plan(rounds)
         before = [[set(r.items()) for r in b['length_scheme']] for b in plan]
         self.assertEqual(check(plan, Path(self._tmp.name), round='semi')
-                         ['error_counts'].get('continuity_seam'), 2)
+                         ['error_counts'].get('continuity_seam'), 1)
 
-        fixed = rotate_scheme_rounds(plan)
-        self.assertIsNone(check(fixed, Path(self._tmp.name), round='semi')
-                          ['error_counts'].get('continuity_seam'))
-        after = [[set(r.items()) for r in b['length_scheme']] for b in fixed]
+        rotated = rotate_scheme_rounds(plan)
+        after = [[set(r.items()) for r in b['length_scheme']] for b in rotated]
         self.assertEqual(before, after, 'rotation must not change any round content')
+        self.assertEqual(check(rotated, Path(self._tmp.name), round='semi')
+                         ['error_counts'].get('continuity_seam'), 1,
+                         'rotating cannot bring two shared orders to the seam at once')
 
-    def test_seam_predicate_is_not_the_weaker_set_equality_rule(self):
-        """Discriminate the two candidate readings of clause 6.
+    def test_seam_predicate_is_not_the_weaker_head_to_tail_rule(self):
+        """Discriminate the candidate predicate from the one it replaced.
 
-        The only two official numbers we hold are 7030 (our package) and 7559
-        (the other line's).  Reproducing 7030 requires:
-
-            B  intersection non-empty AND last key != first key
-
-        and rejects
-
-            C  set(left) == set(right)
-
-        because C scores the 7030 package at 6843.  C survives the 7559 notice
-        only because that package's adjacent rounds had identical order sets, so
-        B and C coincide there and the sample cannot tell them apart.
-
-        This test constructs exactly that discriminating boundary: rounds whose
-        sets DIFFER but overlap, meeting tail-to-head.  B is clean; C (wrongly)
-        would flag it.  If someone ever "simplifies" the checker to C, this
-        fails.
+        The falsified rule compared only the left round's last key with the right
+        round's first key, so it called `A,B -> B,A` clean -- the seam lines up.
+        But A's two appearances are separated by B, which is what clause 6
+        forbids, and the 2026-09-26 notice (7342, on a package that weaker rule
+        scored at 0) is consistent with exactly this.  Restoring the weaker rule
+        makes this fail.
         """
-        # Sets differ ({A,B} vs {A,B,C}) yet A is last in round 0 and first in
-        # round 1 -> head-to-tail holds, so B is silent.  (Round 0 must be
-        # written ending on A, not starting on it.)
-        rounds = [{'B': TOTAL_NET / 3, 'A': TOTAL_NET / 3},
-                  {'A': TOTAL_NET / 3, 'B': 0.0, 'C': 0.0}]
-        plan = clean_plan(rounds)
-        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
-        self.assertIsNone(errs.get('continuity_seam'),
-                          'head-to-tail with different sets must be clean')
-
-        # Same sets and NOT meeting head-to-tail -> B fires (this is the shape
-        # the 7030 notice was made of: tail 0 ends on B, round 1 opens on A).
         rounds = [{'A': TOTAL_NET / 2, 'B': 0.0},
-                  {'A': TOTAL_NET / 2, 'B': 0.0}]
+                  {'B': TOTAL_NET / 2, 'A': 0.0}]
         plan = clean_plan(rounds)
         errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
         self.assertEqual(errs.get('continuity_seam'), 1,
-                         'identical sets in a broken rotation must be flagged')
+                         'A,B -> B,A lines up at the seam but still splits A around B')
+
+        # The shape that IS clean: one shared order, last on the left and first on
+        # the right.
+        rounds = [{'A': TOTAL_NET / 2, 'B': TOTAL_NET / 2},
+                  {'B': TOTAL_NET / 2}]
+        plan = clean_plan(rounds)
+        errs = check(plan, Path(self._tmp.name), round='semi')['error_counts']
+        self.assertIsNone(errs.get('continuity_seam'),
+                          'a single shared order at the seam is clean')
 
 
 if __name__ == '__main__':
