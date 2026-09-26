@@ -151,6 +151,12 @@ def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None, rounds=None
                 # half a piece per round, which the last round absorbs -- as long
                 # as the last round is allowed to take everything that is left,
                 # which is what stops "orders not finished" (466 before).
+                #
+                # Taking the whole rest of an order whenever it fits under the
+                # ceiling instead -- to pack more orders into a round and lift the
+                # official multi-order coverage -- was tried and is worse: the
+                # rounds fill to the ceiling, later ones starve, coverage falls to
+                # 82.97% and six orders go unplaced.
                 take = min(remaining[oid], max(1, round((need - held) / size)))
             current[oid] = take * size
             held += take * size
