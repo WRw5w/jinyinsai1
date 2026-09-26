@@ -55,6 +55,7 @@ NET_MAX = 148.0
 BED_KG = 60000.0
 EPS = 1e-6                      # the checker's 1e-7, widened for float scanning
 COVER_BONUS_KG = 30000.0        # ~0.2/9999 point at the current yield level
+KNIFE_KG = 2830.0               # declared kg one knife is worth at the current score
 
 
 def pieces_of(length, size):
@@ -500,6 +501,121 @@ def coarsen(plan, orders, blanks, max_rounds=6):
     return coarsened
 
 
+def _range_max_table(values):
+    """Sparse table over ints for O(1) `max(values[lo:hi])` queries."""
+    table = [list(values)]
+    k = 1
+    while (1 << k) <= len(values):
+        prev, half = table[-1], 1 << (k - 1)
+        table.append([max(prev[i], prev[i + half]) for i in range(len(values) - (1 << k) + 1)])
+        k += 1
+    return table
+
+
+def _range_max(table, lo, hi):
+    k = (hi - lo).bit_length() - 1
+    row = table[k]
+    return max(row[lo], row[hi - (1 << k)])
+
+
+def covered_orders(rounds):
+    """Orders that share a round with at least one other order (RULES §4)."""
+    shared = set()
+    for scheme in rounds:
+        if len(scheme) > 1:
+            shared.update(scheme)
+    return shared
+
+
+def coarsen_mixed(plan, orders, blanks, max_rounds=6, knife_kg=KNIFE_KG):
+    """Re-cut schemes whose rounds carry different counts into the fewest cheapest rounds.
+
+    `coarsen` refuses these because a re-cut only leaves every delivery untouched
+    when one count multiplies the whole scheme.  A mixed scheme can still be
+    re-cut if each round's count stays at or above the floor of every order on it,
+    `c*_o = ceil(pieces_o / segments_o)`: an order's delivery is the sum over its
+    (contiguous) rounds of `k_r * c_r >= sum k_r * c*_o = segments_o * c*_o >=
+    pieces_o`, so the delivery floor then holds by construction.  The floor is
+    also the cheapest count -- the bill `ceil((net + 2) * count * lin / weight) *
+    weight` is non-decreasing in `count` -- so each round carries exactly
+    `max c*_o` over the orders on it.  Rounds bought are worth `knife_kg` of
+    declared mass (the score's own trade, see docs/OVERPRODUCTION_TRIM.md), so a
+    rewrite is taken only when that beats the bill it adds.
+
+    A rewrite is refused when any order would stop sharing a round: coverage is
+    worth more than the knife (0.2/9999 point ~ 30 t of declared mass per order).
+    """
+    sizes = {oid: o['size'] for oid, o in orders.items()}
+    rewritten = 0
+    for batch in plan:
+        if len(set(batch['counts'])) == 1:
+            continue                    # coarsen() owns uniform schemes
+        lin = float(orders[batch['orders'][0]]['linear'])
+        lin_d = orders[batch['orders'][0]]['linear']
+        try:
+            oids, lengths = piece_index(batch, sizes)
+        except ValueError:
+            continue
+        if not oids:
+            continue
+        weight_d = blanks[batch['blank_type']]
+        weight = float(weight_d)
+        segments = Counter(oids)
+        floor_of = {oid: -(-orders[oid]['pieces'] // segments[oid]) for oid in segments}
+        table = _range_max_table([floor_of[oid] for oid in oids])
+        rounds_now = len(batch['length_scheme'])
+        bill_now = sum(blank_bill((sum(D(str(v)) for v in scheme.values()) + 2) * count * lin_d,
+                                  weight_d)
+                       for scheme, count in zip(batch['length_scheme'], batch['counts']))
+        n = len(oids)
+        rows = [(0, 0.0)] + [(10 ** 9, 0.0)] * n
+        back = [-1] * (n + 1)
+        back_c = [0] * (n + 1)
+        for b in range(1, n + 1):
+            for a in range(b - 1, -1, -1):
+                net = lengths[b] - lengths[a]
+                if net < NET_MIN - 1e-9:
+                    continue
+                if net > NET_MAX + 1e-9:
+                    break
+                if rows[a][0] >= 10 ** 9:
+                    continue
+                count = _range_max(table, a, b)
+                if (net + 2.0) * count * lin > BED_KG + 1e-7:
+                    continue
+                cand = (rows[a][0] + 1,
+                        rows[a][1] + math.ceil(((net + 2.0) * count * lin - EPS) / weight) * weight)
+                if cand < rows[b]:
+                    rows[b] = cand
+                    back[b] = a
+                    back_c[b] = count
+        saved_rounds = rounds_now - rows[n][0]
+        if rows[n][0] > max_rounds or saved_rounds <= 0:
+            continue
+        if knife_kg * saved_rounds <= rows[n][1] - float(bill_now):
+            continue
+        cuts, at = [], n
+        while at > 0:
+            cuts.append(at)
+            at = back[at]
+        cuts.reverse()
+        rounds, counts, start = [], [], 0
+        for end in cuts:
+            rounds.append(to_lengths(span_counts(oids, start, end), sizes))
+            counts.append(back_c[end])
+            start = end
+        if not covered_orders(batch['length_scheme']) <= covered_orders(rounds):
+            continue
+        batch['length_scheme'] = rounds
+        batch['counts'] = counts
+        batch['blank_counts'] = [
+            int((((sum((D(str(v)) for v in scheme.values()), D(0)) + 2) * count * lin_d - D('1e-7'))
+                 / weight_d).to_integral_value(rounding='ROUND_CEILING'))
+            for scheme, count in zip(rounds, counts)]
+        rewritten += 1
+    return rewritten
+
+
 def declared_total(plan, blanks):
     return sum((D(c) * D(str(blanks[b['blank_type']])) for b in plan for c in b['blank_counts']), D(0))
 
@@ -517,6 +633,8 @@ def main():
                     help='declared kg a newly covered order is worth in the search')
     ap.add_argument('--min-rounds', action='store_true',
                     help='re-cut each uniform-count scheme into the fewest rounds first')
+    ap.add_argument('--mixed-rounds', action='store_true',
+                    help='re-cut every mixed-count scheme too, at each round\'s delivery floor')
     ap.add_argument('--no-drop-pieces', action='store_true',
                     help='keep the over-produced pattern pieces (each is a knife)')
     ap.add_argument('--no-lower-counts', action='store_true',
@@ -535,6 +653,9 @@ def main():
     if args.min_rounds:
         stats['coarsened'] = coarsen(plan, orders, blanks)
         stats['rounds_after_coarsen'] = sum(len(b['length_scheme']) for b in plan)
+    if args.mixed_rounds:
+        stats['mixed_coarsened'] = coarsen_mixed(plan, orders, blanks)
+        stats['rounds_after_mixed'] = sum(len(b['length_scheme']) for b in plan)
 
     def shift(tag, passes):
         out = reshape_plan(plan, orders, blanks, window=args.window, passes=passes,

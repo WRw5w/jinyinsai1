@@ -1,7 +1,7 @@
 # 复赛超产转换（2026-09-26 夜）
 
 **一句话**：计划里"多切出来的"片数与申报质量按 1:1 兑换。把 220,141 片超产花掉一大半，
-本地预测分 **91.20 → 91.67**（同一结构，未动批次/轮次/订单集/刀数上界）。
+本地预测分 **91.20 → 91.80**（同一结构，未动批次/订单集/刀数上界）。
 
 ## 为什么这是纯收益
 
@@ -24,7 +24,7 @@
 ## 流水线与守门
 
 ```
-coarsen → reshape → drop_pieces → reshape2 → repack_counts → reshape3 → retype_and_requant
+coarsen → coarsen_mixed → reshape → drop_pieces → reshape2 → repack_counts → reshape3 → retype_and_requant
 ```
 
 - 每一相后跑 `reshape_plan`（切分点平移），把新腾出的交付余量再对齐一次。
@@ -32,13 +32,32 @@ coarsen → reshape → drop_pieces → reshape2 → repack_counts → reshape3 
   count 的每次变化先用精确账单表 `bill(net,c)=⌈(net+2)·c·lin/w − 1e-9⌉·w`（float 预估，最终由
   `retype_and_requant` 用 Decimal 精确写入）预结算，**接收轮跨界整跳 +w ≈ 8,000 kg 的转移一律拒绝**。
 
+## 混合 count 批次的重切（`coarsen_mixed`，2026-09-26 夜半）
+
+`coarsen` 只吃 count 均匀的方案，trim 之后的盘面里 **1,880 个批次有 1,818 个是混合 count**，
+10,349 轮里 10,137 轮在这些批次里 —— 轮数余量大头恰好被这道门挡住。放开它的代价必须自己付清：
+重切会移动切分点，混合 count 下每个订单的交付 `Σ_r k_r·c_r` 会跟着变。
+
+**解法：每轮取该轮订单的交付下限。** 记 `c*_o = ⌈pieces_o / segments_o⌉`（订单自己的下限），
+重切时令每轮 count = 该轮所有订单的 `c*_o` 的最大值。订单的轮次连续，于是
+`Σ_r k_r·c_r ≥ Σ_r k_r·c*_o = segments_o·c*_o ≥ pieces_o` —— **交付下限由构造保证，不靠事后检查**。
+又因账单对 count 单调，每轮的最省 count 就是这个下限本身（低 count 还换来更高的 net 上限）。
+
+- 目标函数用分数自己的汇率：省 1 轮 ≈ 2,830 kg 等效申报；`2830×省轮 > 账单增量` 才改。
+  （等价物换算见 [SCORE_MODEL](SCORE_MODEL.md)；只用"省轮数>0"当判据会放进 187 个"省轮但材料反涨"的净亏批次。）
+- 额外守门：**覆盖率不得下降**（重切可能把共享轮拆开）。实测一条也未被挡。
+- 实测：`_iter1`（91.71）单跑此相 → **91.78**；接全管线再收敛 → **91.80**
+  （刀 184,922→184,730，申报 544.87M→544.17M kg，覆盖 99.71→99.76）。1 秒跑完（窗口内 DP，早停）。
+
 ## 实测（2026-09-26 夜）
 
 | 阶段 | 刀数 | 成材率 | 覆盖率 | 本地分 |
 |---|---:|---:|---:|---:|
 | `cand_rounded`（官方实发 90.59） | 185,229 | 91.39 | 97.43 | 90.5938 |
 | +coarsen 128 轮 +448 次切分点平移（`_cand_shift2`） | 185,101 | 91.75 | 99.64 | 91.20 |
-| **+超产转换（`_cand_full7`）** | **184,922** | **92.80** | **99.70** | **91.67** |
+| +超产转换（`_cand_full7`） | 184,922 | 92.80 | 99.70 | 91.67 |
+| +固定点收敛（`_iter1`） | 184,922 | 92.90 | 99.71 | 91.71 |
+| **+混合批次重切（`_iter11` = `cand_iter11`）** | **184,730** | **93.01** | **99.76** | **91.80** |
 
 `_cand_full7` 细节：申报质量 551.68M → **545.43M kg**（−6.25M）；count 移动 7,142 次
 （6,967 降低 + 175 转移，账单增益 2.29M kg）；片段删除 179 + 切分点平移 418；剩余交付余量 **95,084 片**。
@@ -61,21 +80,24 @@ coarsen → reshape → drop_pieces → reshape2 → repack_counts → reshape3 
 
 ## 下一阶段的靶（今晚量出的地板）
 
-刀数 = 174,573 片段 + 10,349 轮 = 184,922：
+刀数 = 174,571 片段 + 10,159 轮 = 184,730：
 
-- **片段地板** Σₒ ⌈piecesₒ/wcapₒ⌉ = **168,836**（差 5,737 ≈ 1.07 分）。缺口来自超产余量与 count
+- **片段地板** Σₒ ⌈piecesₒ/wcapₒ⌉ = **168,836**（差 5,735 ≈ 1.07 分）。缺口来自超产余量与 count
   降档（dia26.5 实发 73–74 vs 宽度上限 75）；要吃到它必须**在 count 拉满的前提下重切 k**。
-- **轮数地板**：按现批次重排 **9,622**（差 727 ≈ 0.14）；同钢种/同规格组内跨批重排 **8,658**
-  （差 1,691 ≈ 0.32，需重解批次划分）。
-- **覆盖率**：未覆盖 29 单（99.70%），每单 0.002 分。
+- **轮数地板**：按现批次重排 **9,622**（差 537 ≈ 0.10）；同钢种/同规格组内跨批重排 **8,658**
+  （差 1,501 ≈ 0.28，需重解批次划分）。
+- **覆盖率**：未覆盖 24 单（99.76%），每单 0.002 分。
 - 装填已接近容量上限：轮 net≈140/148、count 在 min(宽度上限, 60t 床重上限) 的 **97.5%**；
   dia43 等粗规格受床重限制（轮容量 ≈89m×46 根，而非 148m）。
 
 ## 复现
 
 ```bash
-.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_cand_shift2.json --min-rounds \
-  --output runs/_cand_full7.json --stats runs/_cand_full7.stats.json
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_iter1.json --min-rounds --mixed-rounds \
+  --output runs/_iter10.json --stats runs/_iter10.stats.json
 ```
 
-`_cand_shift2.json` 由 `cand_rounded` 经同一脚本（`--min-rounds`）产生；`runs/*.stats.json` 保留每一相的计数。
+`_cand_shift2.json` 由 `cand_rounded` 经同一脚本（`--min-rounds`）产生；`_iter1.json` 是 `_cand_full7`
+的固定点；加 `--mixed-rounds` 后连跑到不动点即 `_iter11.json`（= `cand_iter11`）。
+`runs/*.stats.json` 保留每一相的计数；`tests/test_shift_cuts.py` 钉住混合重切的交付下限、
+价格规则与覆盖率守门。
