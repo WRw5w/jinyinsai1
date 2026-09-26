@@ -119,13 +119,18 @@ FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
      the chain needs.
   7. letting an order occupy an arbitrary run of consecutive rounds, on the
      theory that the 572 width-capped schemes just need more bar-metres for one
-     heavy order -- 512 schemes.  Worse, and the prototype's round-sharing was
-     not right either.  The idea is not refuted, only unimplemented well; but the
-     chain's 2,024 is the bar to beat and it was not beaten.
+     heavy order -- 512 schemes, and the prototype's round-sharing was wrong.
+     Rewritten properly (sizing each shared round's two halves together, which
+     is the part the first version got wrong) it scores 5.  So the theory is not
+     "unimplemented well": requiring every order to sit in a run of rounds makes
+     each part small, the per-part 48 m floor then rejects almost everything, and
+     the stricter the implementation the worse it gets.  Treat the direction as
+     refuted rather than pending.
 
-Measured, in short: the chain at 2,024 is the best shape found, and the three
-attempts to lift it made things worse.  If one of them is retried, measure it
-against 2,024 before believing it.
+Measured, in short: the chain at 2,024 is the best shape found, and the four
+attempts to lift it scored 0, 1,657, 660 and 512-to-5.  If one of them is retried,
+measure it against 2,024 before believing it -- none of them looked wrong on
+paper, and every one of them was.
 
 WHAT IS STILL MISSING -- do not ship the output as-is
 -----------------------------------------------------
