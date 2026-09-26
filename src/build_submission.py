@@ -224,7 +224,7 @@ def build(args):
     # implements the clause-6 reading that submission falsified.  `resync_reports`
     # applies the same downgrade, so every path that emits a report emits an
     # uncertified one, and the model's own numbers survive under
-    # `legacy_model_result`.
+    # `model_result`.
     report = uncertified_build_report(report)
     atomic_json(output / 'validation_report.json', report)
     # The note is assembled from the round's own facts rather than a fixed

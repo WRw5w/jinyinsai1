@@ -28,7 +28,7 @@ class ReportStatusTests(unittest.TestCase):
             self.assertFalse(result['platform_check_passed'])
             self.assertFalse(result['submission_allowed'])
             self.assertIsNone(result['violation_count'])
-            self.assertTrue(result['legacy_model_result']['platform_check_passed'])
+            self.assertTrue(result['model_result']['platform_check_passed'])
             self.assertEqual(legacy.read_bytes(), b'{"passed": true}\r\n')
             self.assertEqual(json.loads((package / 'validation_report_source.json').read_bytes()), result)
 
@@ -61,7 +61,7 @@ class BuildReportStatusTests(unittest.TestCase):
         self.assertFalse(out['submission_allowed'])
         self.assertIsNone(out['violation_count'])
         # The model's verdict survives, but only under the legacy key.
-        self.assertTrue(out['legacy_model_result']['independent_platform_check']['passed'])
+        self.assertTrue(out['model_result']['independent_platform_check']['passed'])
         self.assertNotIn('independent_platform_check', out)
         # Fields the 提交说明 template still reads must not be dropped.
         self.assertEqual(out['combination_coverage_over_source'], 0.9999)
