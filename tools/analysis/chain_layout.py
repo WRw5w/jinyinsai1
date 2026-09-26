@@ -68,13 +68,31 @@ Two readings, and this file does not settle which:
   * the gate is a limitation, the platform checks the total, and those 572
     schemes were already infeasible before clause 6 entered the picture.
 
-Evidence for the first: the platform's 2026-09-26 notice names only
-`跨轮接续不连续`, no mass complaint.  Evidence against relying on it: that notice
-reports one rule type, and a submission that is both seam-broken and mass-short
-would plausibly name only the first.
+MEASURED, and it points at the first reading
+--------------------------------------------
+On the original `_v4` plan, under the total reading and ignoring the gate:
 
-Settle it before choosing a shape -- it decides whether this layout is progress
-or a regression, and the two directions are opposite.
+    2,050 orders   allocated mass below their own weight
+    2,036 of those used > 1        (the gate does not look at them)
+       14 of those used == 1       (it does)
+
+The platform's two notices (2026-09-23 on v2, 2026-09-26 on v4) report ONLY
+`跨轮接续不连续`, with no mass complaint at all.  If the platform checked the
+total for every order it would have named about two thousand more violations.
+So the multi-round shortfall is not something the platform flags.
+
+And forcing every order to span TWO rounds -- which is what the original does,
+and which keeps `used > 1`, so the gate never applies -- makes the delivery and
+mass floors disappear entirely:
+
+    forced two-round spans   1,657 laid out, short_delivery 0, order_mass_floor 0
+    (seam count rises to 5,552 only because fewer schemes lay out)
+
+That is the shape to build: every order in exactly two consecutive rounds, never
+one, so the layout never enters a check the original avoided.  The layout stops
+at 1,657 because a scheme whose FIRST order is shorter than the 48 m bed minimum
+cannot open with a single-order round -- the next lever, and a much better-posed
+one than the mass model was.
 
 FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
 --------------------------------------------------------------
