@@ -129,6 +129,22 @@ def rounds_of(plan):
             yield batch.get('length_scheme') or []
 
 
+def _shape(value):
+    """Order-preserving structural form, so two plans compare by content AND keys.
+
+    `dict.__eq__` ignores key order, and key order is exactly what the seam
+    predicate reads -- so plain equality would call a rotated plan and its
+    unrotated twin identical.  Whitespace and number formatting are not part of
+    this, because the two copies are serialized independently and the earlier
+    resyncs left byte differences that are not drift.
+    """
+    if isinstance(value, dict):
+        return [(k, _shape(v)) for k, v in value.items()]
+    if isinstance(value, list):
+        return [_shape(v) for v in value]
+    return value
+
+
 def zip_json_mismatches(root: Path) -> list[str]:
     """A deliverable directory holds the SAME plan twice: a `.json` and a `.zip`.
 
@@ -137,6 +153,11 @@ def zip_json_mismatches(root: Path) -> list[str]:
     and ship a package that scores zero.  That actually happened on 2026-09-23:
     three of four repaired packages still had violating .json copies.  Report
     every directory where they disagree.
+
+    The comparison is over the whole plan, key order included.  It used to
+    compare only the reading-B violation counts, which passes any two plans that
+    happen to share a count -- including two unrelated ones -- so it certified
+    agreement it had not checked.
     """
     bad: list[str] = []
     for d in semi_dirs(root):
@@ -154,9 +175,10 @@ def zip_json_mismatches(root: Path) -> list[str]:
                 continue
         except Exception:                              # noqa: BLE001
             continue
-        if reading_B(zplan) != reading_B(jplan):
-            bad.append(f'{d.name}: zip B={reading_B(zplan)} but '
-                       f'json B={reading_B(jplan)} -- stale .json, resync it')
+        if _shape(zplan) != _shape(jplan):
+            bad.append(f'{d.name}: the .json and the .zip hold different plans '
+                       f'(seam count {reading_B(zplan)} vs {reading_B(jplan)}) '
+                       f'-- stale .json, resync it')
     return bad
 
 
@@ -237,7 +259,7 @@ def main() -> int:
         for line in drift:
             print(f'  - {line}')
         return 1
-    print('OK: ZIP/JSON legacy B counts agree; full content equivalence is NOT checked.')
+    print('OK: each package\'s .zip and .json hold the same plan, key order included.')
 
     # A report must certify the bytes that will actually be uploaded.
     print()
