@@ -326,6 +326,11 @@ sha256 `562747594a78de8ea230aac43741b3073a2cccc56c87bafef140bca241a49876`，本�
 非零码退出。`tests/test_trajectory.py`（14 例）钉住阶段展开、四类停止规则（keep-input / 零 delta /
 无 delta 工具分数走平 / `--max-reps` 上限）与"不得低于输入"的守门。
 
+**09-27 清晨自检（tracked 工具复现）**：按上面这条命令从 `_iter11` 整条 QSR×2 重跑，耗时 **343 s**
+（14 个阶段、每阶段迭代到自己的 `cost_delta` 为 0），产物 `runs/_repro.json` 与 `runs/_cy1.json`
+**逐字节相同**（同 sha256 `c658880152ced07d…`）——获胜配方在仓库里的 tracked 工具上完整可复现，
+不再依赖 09-26 夜里的逐条手工命令。
+
 **09-27 凌晨复核结论**：(a) **命令行上的 flag 顺序不影响结果**——`--requant-cuts --split-schemes
 --recount-rounds` 与 `--… --recount-rounds --split-schemes` 两种写法产出**同哈希**
 （`0a66a8dbc2cddd24…`），因为 `shift_cuts` 内部按固定顺序执行各相，命令行只开关；
