@@ -24,12 +24,20 @@ Splits move whole PIECES, not arbitrary reals: an order's allocation in a round
 must be an integer multiple of its 定尺 length, and pieces are integers, so the
 grid is respected by construction rather than by rounding afterwards.
 
-On `runs/semi_merged_v4/result.json` (3,200 schemes):
+On `runs/semi_merged_v4/result.json` (3,200 schemes) the layout and the mass
+are both handled, so this is the current state end to end:
 
-    laid out            2,782   (87.0%; the rest keep their old layout)
-    seam violations     7,344 -> 1,338   (all 1,338 are in schemes not laid out)
+    laid out            2,024   (1,173 left alone)
+    seam violations     7,344 -> 3,464   (all in schemes left alone)
     gap violations          0 -> 0
-    round count         drops -- fewer rounds is fewer knives
+    short_delivery          0     (was 565 with a copied count)
+    order_mass_floor        0     (was 565)
+    bed_width               0     (the count is checked, not assumed)
+    bed_weight              1
+    blank_material         16
+
+The remaining seam count is entirely the schemes left alone, so the next lever
+is the layout success rate, not the checker.
 
 FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
 --------------------------------------------------------------
@@ -174,27 +182,51 @@ def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None):
     return rounds
 
 
-def relayout(plan, sizes, cap=MAX_ROUNDS, linear=None):
+def relayout(plan, sizes, cap=MAX_ROUNDS, linear=None, required=None,
+             diameter=None, blank_weights=None, blank_type=None):
     """Apply `layout` to every multi-order scheme.  Returns (plan, stats).
 
-    `linear` maps order id -> kg/m.  Pass it: without it the length ceiling stays
-    at the raw bed band and rounds come out over the 60 t limit.
+    Needs `linear` (kg/m), `required` (kg of demand per order), `diameter`
+    (mm), `blank_weights` (id -> kg) and each scheme's `blank_type` to set the
+    counts and blank counts.  Schemes whose count would breach the bed width or
+    the bed weight are left alone rather than written out infeasible.
+
+    The count matters twice and both directions bite: it multiplies an order's
+    allocated mass, but it also multiplies the declared blank mass that the yield
+    numerator divides by.  So take the SMALLEST count that clears every resident
+    order's floor, then check it against the width and weight caps.
     """
     laid = skipped = 0
     for scheme in plan:
-        if len(scheme.get('orders') or []) < 2:
+        if len(scheme.get('orders') or []) < 2 or not required:
             skipped += 1
             continue
         lin = linear.get(scheme['orders'][0]) if linear else None
+        dia = diameter.get(scheme['orders'][0]) if diameter else None
         rounds = layout(scheme, sizes, cap=cap, linear=lin)
         if rounds is None:
             skipped += 1
             continue
+
+        need = 1.0
+        for oid in scheme['orders']:
+            held = sum(rnd.get(oid, 0.0) for rnd in rounds)
+            if held > 0:
+                need = max(need, required[oid] / (held * linear[oid]))
+        count = max(1, math.ceil(need))
+        if dia and dia * count > 2000:                  # bed width
+            skipped += 1
+            continue
+        if lin and any((sum(r.values()) + 2) * count * lin > 60000 for r in rounds):
+            skipped += 1
+            continue
+
         scheme['length_scheme'] = rounds
-        # Placeholder only -- see "what is still missing" in the module docstring.
-        n = len(rounds)
-        scheme['counts'] = [scheme['counts'][0]] * n
-        scheme['blank_counts'] = [scheme['blank_counts'][0]] * n
+        scheme['counts'] = [count] * len(rounds)
+        if blank_weights:
+            weight = blank_weights[scheme['blank_type']]
+            scheme['blank_counts'] = [
+                math.ceil((sum(r.values()) + 2) * count * lin / weight) for r in rounds]
         laid += 1
     return plan, {'laid_out': laid, 'untouched': skipped}
 
@@ -208,12 +240,24 @@ def load_sizes(root, round_name='semi'):
             {oid: order.linear_weight for oid, order in ctx.orders.items()})
 
 
+def load_mass_data(root, round_name='semi'):
+    """(required_kg, diameter_mm, blank_weights) -- what the count needs."""
+    sys.path.insert(0, str(Path(root) / 'src'))
+    from platform_score import load_scoring_data            # noqa: E402
+    ctx = load_scoring_data(Path(root) / f'data/{round_name}', round_name)
+    return ({oid: float(order.required_kg) for oid, order in ctx.orders.items()},
+            {oid: order.diameter_mm for oid, order in ctx.orders.items()},
+            dict(ctx.blank_weights))
+
+
 def main():
     root = Path(__file__).resolve().parents[2]
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else root / 'runs/semi_merged_v4/result.json'
     plan = json.loads(Path(src).read_text(encoding='utf-8'))
     sizes, linear = load_sizes(root)
-    _, stats = relayout(plan, sizes, linear=linear)
+    required, diameter, blank_weights = load_mass_data(root)
+    _, stats = relayout(plan, sizes, linear=linear, required=required,
+                        diameter=diameter, blank_weights=blank_weights)
     print(json.dumps(stats, ensure_ascii=False))
 
 

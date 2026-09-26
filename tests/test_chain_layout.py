@@ -97,16 +97,20 @@ class ChainLayoutTests(unittest.TestCase):
         before = candidate.count_boundaries(plan)
         self.assertGreater(before, 0)
         sizes, linear = chain_layout.load_sizes(ROOT)
-        laid, stats = chain_layout.relayout(plan, sizes, linear=linear)
+        required, diameter, blank_weights = chain_layout.load_mass_data(ROOT)
+        laid, stats = chain_layout.relayout(
+            plan, sizes, linear=linear, required=required,
+            diameter=diameter, blank_weights=blank_weights)
         after = candidate.count_boundaries(laid)
         self.assertEqual(candidate.count_order_gaps(laid), 0,
                          'the layout must not introduce a skipped round')
-        # Every remaining violation belongs to a scheme that did NOT lay out, so
-        # the layout itself is exactly clean.  On this run that is 415 schemes
-        # plus the 3 single-order ones, i.e. 418 left alone out of 3,200.
-        self.assertLess(after / before, 0.25,
-                        'on this run the layout clears ~87% of schemes outright')
-        self.assertGreater(stats['laid_out'], 2000)
+        # Every remaining violation belongs to a scheme left alone -- either it
+        # would not lay out, or the count it needs breaches the bed width or the
+        # bed weight and it is not written out infeasible.  On this run that is
+        # 1,173 of 3,200, so the seam count falls to about half.
+        self.assertLess(after / before, 0.6,
+                        'the layout must clear a large share of the seams')
+        self.assertGreater(stats['laid_out'], 1900)
 
 
 if __name__ == '__main__':
