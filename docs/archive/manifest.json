@@ -1,0 +1,568 @@
+{
+  "format": 1,
+  "date": "2026-09-26",
+  "source_commit": "39957819cee78ab43355d053140778a4785a53ea",
+  "description": "Exact pre-rewrite checkout bytes; historical claims are not current instructions.",
+  "files": [
+    {
+      "path": ".workbuddy/memory/2026-09-16.md",
+      "bytes": 25738,
+      "lines": 286,
+      "sha256": "a749c783cde3d5b724e6b9fb75172a3584efb682ce4f07050375829b6e48d160",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/2026-09-17.md",
+      "bytes": 29732,
+      "lines": 454,
+      "sha256": "6c8f882722e405d06b58e84ed78c82c5ec6f151294f779b227faa61be0ecfa16",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/2026-09-18.md",
+      "bytes": 7951,
+      "lines": 130,
+      "sha256": "586a2b54d5b2a12a1f58e322eb80605c9e1e891b0ecd3aa4c4dfcfb3941a63b5",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/2026-09-20.md",
+      "bytes": 7765,
+      "lines": 117,
+      "sha256": "d8f5685b88e035d89d39092e472253cd1c3a63a50e1caad3bc8aeb4345baa880",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/2026-09-21.md",
+      "bytes": 9975,
+      "lines": 200,
+      "sha256": "4044234200cb571c998ce1fea9623242c550366183841587e4ee84d574a0160b",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/2026-09-22.md",
+      "bytes": 40565,
+      "lines": 578,
+      "sha256": "a5628d06d2dc3f43fb007b2a612bbb32371bbb654d635a14343b809369c3d7f7",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/automations/26375aa0-237c-40c5-ab61-42919f22ee89/memory.md",
+      "bytes": 2821,
+      "lines": 44,
+      "sha256": "cc29d70ec760394660aaf9e86242205e42ffdc619e0c9639729ba9e8e8bea245",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": ".workbuddy/memory/automations/46abcf3b-4ae0-4377-99ce-0223602cbf05/memory.md",
+      "bytes": 8145,
+      "lines": 94,
+      "sha256": "a82a5609fd62645b865a44e4210cb8db40b117028cdfb6bc6bf0bd41761f4776",
+      "category": "agent-event-memory",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "COMPARISON_in_package_two_tracks.md",
+      "bytes": 15923,
+      "lines": 271,
+      "sha256": "c3e686c482d5821b9d8a4f36ddbac06a623d97cce4db7d4fbf34d628a57edaca",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "HANDOFF.md",
+      "bytes": 40195,
+      "lines": 429,
+      "sha256": "9f0ef320715d4cdb04f1755c69a3c1eebaf56dbe4d3463fd3c0fd3b4c62c4875",
+      "category": "mixed-current-and-history",
+      "action": "rewrite"
+    },
+    {
+      "path": "MIGRATION.md",
+      "bytes": 12958,
+      "lines": 236,
+      "sha256": "9213cf0ef5787870249faf01d0c6feb6bdb245dba6194fbad099d569936b11c6",
+      "category": "mixed-current-and-history",
+      "action": "rewrite"
+    },
+    {
+      "path": "README.md",
+      "bytes": 28625,
+      "lines": 252,
+      "sha256": "b51d2ec8a97ebd40961d47aaa239f908540c06bb19fc255bdee91bc3e8d9c990",
+      "category": "mixed-current-and-history",
+      "action": "rewrite"
+    },
+    {
+      "path": "RULES.md",
+      "bytes": 48956,
+      "lines": 746,
+      "sha256": "3981d66cf4ff85942ffa899c23e5dd7af5e7a61280bb377eda789fa0cd3afb11",
+      "category": "mixed-current-and-history",
+      "action": "rewrite"
+    },
+    {
+      "path": "diagnostics/clause6_OPEN_RISK_20260923.md",
+      "bytes": 4212,
+      "lines": 84,
+      "sha256": "795daec8fc99b47d82e9e2c18f1bbf859c0e3f2e2894e5006a49c98eaac8c8f1",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "diagnostics/clause6_predicate_resolved_20260923.md",
+      "bytes": 7509,
+      "lines": 145,
+      "sha256": "d9b04c589a36f7b7299742d71c9e735f459545f0a5d423c15ebf23156bac8dd6",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "diagnostics/clause6_rotation_falsified_20260926.md",
+      "bytes": 4343,
+      "lines": 88,
+      "sha256": "09921100028f0b7b9329a2ae17d270b6a7b9e493cebf4621709f2f172456618f",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "diagnostics/knife_cap_research.md",
+      "bytes": 12924,
+      "lines": 164,
+      "sha256": "bd273700695c25068778ea799c9f5978f97b5c8c3b405c732ddcd4a12308a0ea",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "diagnostics/official_semi_feedback_20260923.md",
+      "bytes": 3247,
+      "lines": 35,
+      "sha256": "cfc256685f9e54b8a88f0dc5125a8d2bf828d3c585e3453e46db7dfb9747b988",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/EVIDENCE.md",
+      "bytes": 5848,
+      "lines": 56,
+      "sha256": "e9a888a029eeb1847fc133097acbf50c28a685068b346e9697748db92a204a98",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/artifacts/local_97_868663/提交说明.md",
+      "bytes": 2291,
+      "lines": 19,
+      "sha256": "a8ea2747ce132a534632bd9d55f1976f4d332b2b23a9ffaeb04b977b8c32be90",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/artifacts/official_87_65/提交说明.md",
+      "bytes": 1679,
+      "lines": 15,
+      "sha256": "23dc4f39eceeba455d4b496a30dac7bd4050e8663dc0d265f2ba5edd1844544e",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/artifacts/official_89_19/DO_NOT_RESUBMIT.md",
+      "bytes": 585,
+      "lines": 7,
+      "sha256": "113ee7a17fa7716f259625e1ca1d875cfe27e0c99c976eb6ed87910dbd495bea",
+      "category": "preliminary-history",
+      "action": "retain-on-demand"
+    },
+    {
+      "path": "evidence/20260916/artifacts/official_89_19/before_feedback_EVIDENCE.md",
+      "bytes": 3328,
+      "lines": 38,
+      "sha256": "197a35d3460ab30826d4f2cba346866548e0b779aad3e7cf821d10f6d984835c",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/artifacts/official_89_19/提交说明.md",
+      "bytes": 2286,
+      "lines": 19,
+      "sha256": "d660f3e78fc8782dd3e7d7aa29c971c2c20826d36f25e6ab983aaffae2a4e1ea",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/artifacts/official_96_49/提交说明.md",
+      "bytes": 2294,
+      "lines": 19,
+      "sha256": "d53d06e889f0b799f1761079076b3fdaa8f40b3931f14330127110672bfede73",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/calibration_review.md",
+      "bytes": 6042,
+      "lines": 52,
+      "sha256": "1ee2fece24dd40d1e0d5d792091ff42306cd586aed361458fa5a2b43341aaccd",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/coupled_bounds.md",
+      "bytes": 1181,
+      "lines": 17,
+      "sha256": "cda0549a27ef89315ed4ffe775087389d69b9cad21b5911966cf903deb9c0fb6",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/leaderboard_top20.md",
+      "bytes": 2507,
+      "lines": 28,
+      "sha256": "fd72944e4a84485ff8693d66bea7346acb5e23f6eec3333c444d685d9c7b8454",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/20260916/model_bounds.md",
+      "bytes": 2248,
+      "lines": 34,
+      "sha256": "c7606d951aef09acc4bae4284a44b2cddbb37c1cee2cd046b62d799b785e6c43",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "evidence/rules/RULES_AUTHORITATIVE_20260926.md",
+      "bytes": 7691,
+      "lines": 172,
+      "sha256": "918739bf53466e36d269e9e646a6b4e13679fdbe13deb503b5671407176133c4",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "legacy/README.md",
+      "bytes": 1911,
+      "lines": 27,
+      "sha256": "470f1a67ebc1be380d01bad8a642ad3df0895c98ebdfbc123fc43b90806648c2",
+      "category": "preliminary-history",
+      "action": "retain-on-demand"
+    },
+    {
+      "path": "normal_group_search.md",
+      "bytes": 3329,
+      "lines": 56,
+      "sha256": "d648c4dcf1fc89a0380a5fdb412fa77c2bce32756e95e34f80aac897c95c467c",
+      "category": "preliminary-history",
+      "action": "retain-on-demand"
+    },
+    {
+      "path": "submission/DO_NOT_SUBMIT.md",
+      "bytes": 330,
+      "lines": 5,
+      "sha256": "6d4bf3b26127500bfb5dff03f4619951ff164d179313fa598876b31f897eb84d",
+      "category": "preliminary-history",
+      "action": "retain-on-demand"
+    },
+    {
+      "path": "submission/提交说明.md",
+      "bytes": 1332,
+      "lines": 13,
+      "sha256": "fce3c84c57473b0afd898271128ad26e915e2280ad1547f633633d7528dc7b38",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_calibrated/提交说明.md",
+      "bytes": 2761,
+      "lines": 21,
+      "sha256": "43b02b2f960fb4db4593678e2f827fd463ad5b80d4810d1647bc6fcd666aeb40",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_calibrated_next/提交说明.md",
+      "bytes": 2760,
+      "lines": 21,
+      "sha256": "90897c9ed848f359ae1b760f4718b5332a621e1a3704a87b88281a4b448fedb7",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_continued/提交说明.md",
+      "bytes": 2291,
+      "lines": 19,
+      "sha256": "a8ea2747ce132a534632bd9d55f1976f4d332b2b23a9ffaeb04b977b8c32be90",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_continued_checkpoint/提交说明.md",
+      "bytes": 2295,
+      "lines": 19,
+      "sha256": "07e9326bfbde908420918d3e9f200cf3ffaaca9502e0a9a1cf2e3ba67d00d41e",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_fill/提交说明.md",
+      "bytes": 5833,
+      "lines": 62,
+      "sha256": "0c1ff794bae79939e5e7c5cc7a8c7e6215b7dc353850d5e130fb621a488d2d1d",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_fill_lattice/提交说明.md",
+      "bytes": 6474,
+      "lines": 102,
+      "sha256": "053fe581f86fccf2867e500eb772e395d9eca5a316cd60b78bf333babbc4d8cc",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_fill_safe/提交说明.md",
+      "bytes": 5069,
+      "lines": 60,
+      "sha256": "63b76f346ceff74a2416839d9bad34eb743a29a90643bf6b5de17c62588b97ee",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_fixed/提交说明.md",
+      "bytes": 1679,
+      "lines": 15,
+      "sha256": "23dc4f39eceeba455d4b496a30dac7bd4050e8663dc0d265f2ba5edd1844544e",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_island_partition/DO_NOT_RESUBMIT.md",
+      "bytes": 1578,
+      "lines": 30,
+      "sha256": "4c35d41505f4e82bcc2e4f92ec04df133f4c2549b6e6a48a3094df5e5515f179",
+      "category": "preliminary-history",
+      "action": "retain-on-demand"
+    },
+    {
+      "path": "submission_island_partition/提交说明.md",
+      "bytes": 2764,
+      "lines": 21,
+      "sha256": "9274e6cdcbdec52a630f240989b9f819ac6beb982103da4485635acd351b96f6",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_island_structure/提交说明.md",
+      "bytes": 2762,
+      "lines": 21,
+      "sha256": "042cb2508a626a4e0367a1eb7d836401708281fdae3d510456cbd679493f0408",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_knife_hunt/提交说明.md",
+      "bytes": 2750,
+      "lines": 21,
+      "sha256": "dcdc1c990ba6accbd5543473832afde30dfbb21a7e6b0e409f0a1a34513850f6",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_knife_hunt2/提交说明.md",
+      "bytes": 2742,
+      "lines": 21,
+      "sha256": "5658a5db5598f74bfbead33ad5cd4f5e2798ba7f54c1a3b57f6a82f1eeaa047f",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_knife_hunt3/提交说明.md",
+      "bytes": 2742,
+      "lines": 21,
+      "sha256": "d7842b00b636f227a3b491bdbcc8d2b346eb6a2969a9a3f1279ea26c2f55f990",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_knife_hunt_fixed/提交说明.md",
+      "bytes": 2747,
+      "lines": 21,
+      "sha256": "bb1b1a4727344e3727fa5de27ab90cae25e11e1f95bd171b4e69946a69c55d87",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_normal_9841/提交说明.md",
+      "bytes": 2303,
+      "lines": 19,
+      "sha256": "88b33b5c38dc7e1402a88e3b8c3b79c92f8e2388e44571e28ec1ae461774d9c5",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_normal_985/DO_NOT_RESUBMIT.md",
+      "bytes": 585,
+      "lines": 7,
+      "sha256": "113ee7a17fa7716f259625e1ca1d875cfe27e0c99c976eb6ed87910dbd495bea",
+      "category": "preliminary-history",
+      "action": "retain-on-demand"
+    },
+    {
+      "path": "submission_normal_985/提交说明.md",
+      "bytes": 2286,
+      "lines": 19,
+      "sha256": "d660f3e78fc8782dd3e7d7aa29c971c2c20826d36f25e6ab983aaffae2a4e1ea",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_normal_99_search/提交说明.md",
+      "bytes": 2290,
+      "lines": 19,
+      "sha256": "2f0323b5fee08b0de0047b362ec88974398e00af5bfb91681ade7d6ce9fcaaba",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_normal_best/提交说明.md",
+      "bytes": 2291,
+      "lines": 19,
+      "sha256": "d07f1b7986f785a5cc306bb82533f2c9f8f4243ef433d7d1db9c85305cfaf67c",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_optimized/提交说明.md",
+      "bytes": 2294,
+      "lines": 19,
+      "sha256": "d53d06e889f0b799f1761079076b3fdaa8f40b3931f14330127110672bfede73",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_optimized_2pct/提交说明.md",
+      "bytes": 2293,
+      "lines": 19,
+      "sha256": "7f5c6c8ce1c09048cabe245ce9a7a13d03282cb7ef80b0178056a78af0fdcb1c",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_optimized_exact/提交说明.md",
+      "bytes": 2284,
+      "lines": 19,
+      "sha256": "85379c32085fb09b8f008e9e4e82250f3c2dbc0217ef56f5b8ff643da194ccf1",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_ours_94/提交说明.md",
+      "bytes": 2716,
+      "lines": 23,
+      "sha256": "aec98e1f5541140ca3c54d55e230d9da011228fff785004858b30aa0fe190777",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_ours_seed/提交说明.md",
+      "bytes": 2712,
+      "lines": 23,
+      "sha256": "07594ccbae5d30aba3177c11a3cd606ffd185e4560a329842fa267bc5a1689f9",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_probe_aggregate/提交说明.md",
+      "bytes": 2752,
+      "lines": 21,
+      "sha256": "7b0e8abf595a624c149afa00fe381bef53b09159f10c32303c82a1fb15a34d19",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_probe_floor/提交说明.md",
+      "bytes": 2748,
+      "lines": 21,
+      "sha256": "9b9431430e966d080503cb71372e2109ee1205668e0f523c7b5959641d1ddd98",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_probe_notrim/提交说明.md",
+      "bytes": 2749,
+      "lines": 21,
+      "sha256": "3f836bba8a4e5d97a06db6ed4976291f85a21e43f385d4a2b57927e9b40dc736",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_restore_9649/恢复说明.md",
+      "bytes": 837,
+      "lines": 11,
+      "sha256": "6737ae9930b3ec2c42a896954c564de48aa158f81c0904de1e2619996b326447",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_semi_FIXED/提交说明.md",
+      "bytes": 2716,
+      "lines": 23,
+      "sha256": "aec98e1f5541140ca3c54d55e230d9da011228fff785004858b30aa0fe190777",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_semi_merged_v2/提交说明.md",
+      "bytes": 2720,
+      "lines": 23,
+      "sha256": "6e74e718a34b96debd49276ab3df9c41880ac7687efe614cd63ef838da9029b3",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_semi_merged_v4/提交说明.md",
+      "bytes": 2743,
+      "lines": 23,
+      "sha256": "91c997ab68b50ea92d2e1aaa62fd44caa4b866b2724706073e64ec1b17cc0e5e",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_semi_nolimit/提交说明.md",
+      "bytes": 2722,
+      "lines": 23,
+      "sha256": "3e8ac9c93a905ad8d9160c08329a0e5ed8ff7361fa1c996e6810d47397c81c8c",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_semi_safety/提交说明.md",
+      "bytes": 4081,
+      "lines": 80,
+      "sha256": "dd92d6ad473ed0eeacd5c7745497f1b4a560d7462edc12ec5e3d23111a451a71",
+      "category": "semifinal-superseded-analysis",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_shed/提交说明.md",
+      "bytes": 6453,
+      "lines": 98,
+      "sha256": "001e543b30e721f6127b5535f492d59f0a8ec6c8b177e1bbdea53caba1635a02",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    },
+    {
+      "path": "submission_yield_push/提交说明.md",
+      "bytes": 2747,
+      "lines": 21,
+      "sha256": "59bf5f2d8d9e6b0f36e9fa19c524b81e8b05dc9488787322a0ef91da342f4dc4",
+      "category": "preliminary-history",
+      "action": "archive-and-link"
+    }
+  ]
+}
