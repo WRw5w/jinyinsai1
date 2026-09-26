@@ -39,6 +39,43 @@ are both handled, so this is the current state end to end:
 The remaining seam count is entirely the schemes left alone, so the next lever
 is the layout success rate, not the checker.
 
+WHY THE LAYOUT SUCCESS RATE STALLS AT 63%, AND A TRAP IN THE CHECKER
+--------------------------------------------------------------------
+Left alone: 577 do not lay out geometrically, 572 need a count above the bed
+width cap, 24 breach the bed weight, 3 are single-order.
+
+The 572 are the interesting ones and they are NOT a layout bug.  Scheme 1115:
+
+    diameter 26.5 -> bed width caps the count at 75
+    original counts [75, 71] -- already AT the cap
+    original bar-metres for B20273534  6,086
+    the order's floor needs             6,284
+
+The original scheme is about 3% short of its own mass floor, and no re-layout can
+fix that: raising the count is impossible (the width cap) and adding rounds needs
+the order to spread, which is the opposite of what a clean seam wants.
+
+It was never flagged because `platform_check` gates that check on `used[oid] == 1`
+-- an order appearing in one round is checked against its weight, one appearing in
+several is not.  The chain layout concentrates orders into one or two rounds, so
+it walks straight into the check the original avoided.
+
+Two readings, and this file does not settle which:
+
+  * the gate mirrors the platform, in which case concentrating orders CREATES
+    violations that the spread-out layout did not have, and the chain shape is
+    the wrong answer even though it is seam-clean;
+  * the gate is a limitation, the platform checks the total, and those 572
+    schemes were already infeasible before clause 6 entered the picture.
+
+Evidence for the first: the platform's 2026-09-26 notice names only
+`跨轮接续不连续`, no mass complaint.  Evidence against relying on it: that notice
+reports one rule type, and a submission that is both seam-broken and mass-short
+would plausibly name only the first.
+
+Settle it before choosing a shape -- it decides whether this layout is progress
+or a regression, and the two directions are opposite.
+
 FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
 --------------------------------------------------------------
   1. duplicating the spanning order's length into both rounds instead of
