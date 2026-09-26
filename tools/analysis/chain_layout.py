@@ -112,6 +112,20 @@ FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
      is not equivalent and was reverted rather than shipped broken.  If you retry
      it, build the rounds as head/tail pairs per order instead of patching the
      fill loop.
+  6. building those head/tail pairs from scratch (order o occupies rounds j and
+     j+1, so m orders need m+1 rounds) -- 660 schemes, against 2,024.  Requiring
+     EVERY order to span costs a round per order, and with a six-round cap that
+     only fits five orders; most schemes here have fewer rounds to spare than
+     the chain needs.
+  7. letting an order occupy an arbitrary run of consecutive rounds, on the
+     theory that the 572 width-capped schemes just need more bar-metres for one
+     heavy order -- 512 schemes.  Worse, and the prototype's round-sharing was
+     not right either.  The idea is not refuted, only unimplemented well; but the
+     chain's 2,024 is the bar to beat and it was not beaten.
+
+Measured, in short: the chain at 2,024 is the best shape found, and the three
+attempts to lift it made things worse.  If one of them is retried, measure it
+against 2,024 before believing it.
 
 WHAT IS STILL MISSING -- do not ship the output as-is
 -----------------------------------------------------
