@@ -37,6 +37,17 @@ CASES = [
 
 SKIP_IN_NAME = ('validation', 'feedback', 'packed_score')
 
+# Which directories are semi-final deliverables?  Selecting them by name prefix
+# (`submission_semi_*`) is how this file used to do it, and that silently skipped
+# `submission_ours_94` and `submission_ours_seed` -- both are semi-final packages
+# listed in MIGRATION.md, both were repaired on 2026-09-23, and both kept a stale
+# plan `.json` and a stale validation report because the resync pass used the same
+# prefix.  A deliverable is better identified by what it holds: a semi-final ZIP.
+def semi_dirs(root: Path):
+    for d in sorted(root.glob('submission*')):
+        if d.is_dir() and next(d.glob('复赛结果_*.zip'), None) is not None:
+            yield d
+
 
 def load(path: Path):
     """Read a plan from a directory of deliverables, or a bare .json file."""
@@ -66,7 +77,7 @@ def report_hash_mismatches(root: Path) -> list[str]:
     Regenerate with `python -X utf8 tools/resync_reports.py --all`.
     """
     bad: list[str] = []
-    for d in sorted(root.glob('submission_semi_*')):
+    for d in semi_dirs(root):
         if not d.is_dir():
             continue
         zips = list(d.glob('*.zip'))
@@ -96,7 +107,7 @@ def report_hash_mismatches(root: Path) -> list[str]:
     every directory where they disagree.
     """
     bad: list[str] = []
-    for d in sorted(root.glob('submission_semi_*')):
+    for d in semi_dirs(root):
         if not d.is_dir():
             continue
         zips = list(d.glob('*.zip'))
@@ -133,7 +144,7 @@ def zip_json_mismatches(root: Path) -> list[str]:
     every directory where they disagree.
     """
     bad: list[str] = []
-    for d in sorted(root.glob('submission_semi_*')):
+    for d in semi_dirs(root):
         if not d.is_dir():
             continue
         zips = list(d.glob('*.zip'))
