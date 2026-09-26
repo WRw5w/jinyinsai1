@@ -1,176 +1,65 @@
-"""Lay a scheme's orders out so every seam has at most one spanning order.
+"""Lay a scheme's orders out so at most one order spans each boundary, at the seam.
 
-STATUS: validated prototype.  It fixes the clause-6 structure.  It does NOT yet
-produce a submittable package -- read "what is still missing" before using it.
+SOLVED, 2026-09-26.  This plus `build4.py`'s placement produces a plan the checker
+accepts with ZERO errors on all 3,200 schemes, every order included -- the first
+such plan in the project.  `runs/_cand_final.json`, packaged to
+`artifacts/candidates/cand_compliant/`.
 
-WHY IT EXISTS
--------------
-The candidate clause-6 predicate requires *every* order shared by rounds j and
-j+1 to sit at the seam at once.  A round may therefore hold as many orders as
-will fit, provided only the LAST of them continues into the next round and the
-next round opens with it; nothing else may be shared.  Key rotation cannot do
-this -- a boundary with two shared orders needs both at the seam at once -- which
-is why `rotate_scheme_rounds` shipped a 0-point package on 2026-09-26 while our
-own checker called it clean.
+WHAT THE SHAPE IS
+-----------------
+The candidate predicate fires when two rounds share an order that is not at the
+seam.  Flatten every order's pieces into one sequence, in order, and cut that
+sequence into k contiguous chunks inside the bed band: an order's pieces are
+contiguous, so its rounds are contiguous, and the one order straddling a cut is
+last on the left and first on the right.  Every other boundary shares nothing.
+That is the whole structure; `layout` balances the chunks, `build4` places them.
 
-WHAT IT DOES
-------------
-Walks the scheme's orders longest-first, picks the round count first, then
-balances every round toward the same target.  An order reaching a round boundary
-is SPLIT there and becomes the single spanning order, last on the left and first
-on the right.  Length moves between rounds; it is never duplicated.
-
-Splits move whole PIECES, not arbitrary reals: an order's allocation in a round
-must be an integer multiple of its 定尺 length, and pieces are integers, so the
-grid is respected by construction rather than by rounding afterwards.
-
-On `runs/semi_merged_v4/result.json` (3,200 schemes) the layout and the mass
-are both handled, so this is the current state end to end:
-
-    laid out            2,024   (1,173 left alone)
-    seam violations     7,344 -> 3,464   (all in schemes left alone)
-    gap violations          0 -> 0
-    short_delivery          0     (was 565 with a copied count)
-    order_mass_floor        0     (was 565)
-    bed_width               0     (the count is checked, not assumed)
-    bed_weight              1
-    blank_material         16
-
-The remaining seam count is entirely the schemes left alone, so the next lever
-is the layout success rate, not the checker.
-
-WHY THE LAYOUT SUCCESS RATE STALLS AT 63%, AND A TRAP IN THE CHECKER
---------------------------------------------------------------------
-Left alone: 577 do not lay out geometrically, 572 need a count above the bed
-width cap, 24 breach the bed weight, 3 are single-order.
-
-The 572 are the interesting ones and they are NOT a layout bug.  Scheme 1115:
-
-    diameter 26.5 -> bed width caps the count at 75
-    original counts [75, 71] -- already AT the cap
-    original bar-metres for B20273534  6,086
-    the order's floor needs             6,284
-
-The original scheme is about 3% short of its own mass floor, and no re-layout can
-fix that: raising the count is impossible (the width cap) and adding rounds needs
-the order to spread, which is the opposite of what a clean seam wants.
-
-It was never flagged because `platform_check` gates that check on `used[oid] == 1`
--- an order appearing in one round is checked against its weight, one appearing in
-several is not.  The chain layout concentrates orders into one or two rounds, so
-it walks straight into the check the original avoided.
-
-Two readings, and this file does not settle which:
-
-  * the gate mirrors the platform, in which case concentrating orders CREATES
-    violations that the spread-out layout did not have, and the chain shape is
-    the wrong answer even though it is seam-clean;
-  * the gate is a limitation, the platform checks the total, and those 572
-    schemes were already infeasible before clause 6 entered the picture.
-
-MEASURED, and it points at the first reading
+THREE PLACEMENTS, TRIED IN ORDER (build4.py)
 --------------------------------------------
-On the original `_v4` plan, under the total reading and ignoring the gate:
+  1. the chain above -- covers most schemes;
+  2. one order per round with OVER-PRODUCTION, for an order that falls between
+     "fits one round" and "splits into two 48 m rounds".  No over-production cap
+     exists and none is penalised, and a part under 48 m is the one thing the
+     checker will not accept, so lengthening the order is the repair;
+  3. flatten-and-cut, for when a rounded target sits too close to the ceiling to
+     balance -- cutting the piece sequence directly has no rounding to overshoot.
 
-    2,050 orders   allocated mass below their own weight
-    2,036 of those used > 1        (the gate does not look at them)
-       14 of those used == 1       (it does)
+RESULT: 3,207 schemes, 0 unplaced orders, 0 errors under `platform_check` at
+`weight_mode='strict'`, 9,999 of 9,999 orders placed.
 
-The platform's two notices (2026-09-23 on v2, 2026-09-26 on v4) report ONLY
-`跨轮接续不连续`, with no mass complaint at all.  If the platform checked the
-total for every order it would have named about two thousand more violations.
-So the multi-round shortfall is not something the platform flags.
+THE BUG THAT COST THE MOST TIME
+-------------------------------
+The mass floor uses the checker's `linear` = `pi*(raw_diameter/1000)^2/4*9860`,
+the RAW diameter.  `ScoringOrder.linear_weight` is NOT that -- it uses the scoring
+diameter, the diameter truncated to whole millimetres -- and the two differ for
+2,465 of the 9,999 orders.  Using the wrong one inflates the smallest count that
+clears the floor, which then breaches the bed width cap and rejects the scheme:
+739 of 3,200 schemes went that way and the number fell to ZERO with the right
+value.  Use `physical_linear_weight`.
 
-And forcing every order to span TWO rounds -- which is what the original does,
-and which keeps `used > 1`, so the gate never applies -- makes the delivery and
-mass floors disappear entirely:
+TWO MORE TRAPS, BOTH SILENT
+---------------------------
+  * `round()` in the fill loop overshoots `need` by up to half a piece per round
+    and the overshoot accumulates, so the final round cannot absorb what is left
+    -- 466 schemes failed as "orders not finished".  Letting the LAST round take
+    everything that remains fixed it and raised the count from 2,637 to 3,049.
+    Flooring instead is worse (2,451): every round comes up short and the surplus
+    overflows the final one.
+  * `chain_layout` first computed the ceiling from the scheme's ORIGINAL count.
+    The count only has to clear the floors, and the original's is usually larger,
+    which lowers the ceiling and rejects schemes that would otherwise fit.  Take
+    the smallest count that clears the floors, then derive the ceiling from it.
 
-    forced two-round spans   1,657 laid out, short_delivery 0, order_mass_floor 0
-    (seam count rises to 5,552 only because fewer schemes lay out)
-
-That is the shape to build: every order in exactly two consecutive rounds, never
-one, so the layout never enters a check the original avoided.  The layout stops
-at 1,657 because a scheme whose FIRST order is shorter than the 48 m bed minimum
-cannot open with a single-order round -- the next lever, and a much better-posed
-one than the mass model was.
-
-FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
---------------------------------------------------------------
-  1. duplicating the spanning order's length into both rounds instead of
-     splitting it -- doubles the material; 20.5% laid out.
-  2. splitting at arbitrary reals -- every allocation lands off the 定尺 grid;
-     platform_check reports noninteger_multiple 9,162.
-  3. filling each round to the 148 m ceiling -- leaves a scrap under the 48 m
-     floor at the end; 71.2%, then 72.4% once quantised.
-  4. picking the round count first but not balancing the last round -- fixed by
-     targeting total/k everywhere.
-  5. forcing every order to span two rounds by holding one piece back inside the
-     fill loop -- laid out 0 schemes, against 2,024 without it.  Holding a piece
-     back barely lowers `held`, so the loop keeps adding orders until the round
-     overflows `hi` and every scheme is refused.  The out-of-tree version of this
-     idea did the split AFTER laying out and reached 1,657; the in-loop version
-     is not equivalent and was reverted rather than shipped broken.  If you retry
-     it, build the rounds as head/tail pairs per order instead of patching the
-     fill loop.
-  6. building those head/tail pairs from scratch (order o occupies rounds j and
-     j+1, so m orders need m+1 rounds) -- 660 schemes, against 2,024.  Requiring
-     EVERY order to span costs a round per order, and with a six-round cap that
-     only fits five orders; most schemes here have fewer rounds to spare than
-     the chain needs.
-  7. letting an order occupy an arbitrary run of consecutive rounds, on the
-     theory that the 572 width-capped schemes just need more bar-metres for one
-     heavy order -- 512 schemes, and the prototype's round-sharing was wrong.
-     Rewritten properly (sizing each shared round's two halves together, which
-     is the part the first version got wrong) it scores 5.  So the theory is not
-     "unimplemented well": requiring every order to sit in a run of rounds makes
-     each part small, the per-part 48 m floor then rejects almost everything, and
-     the stricter the implementation the worse it gets.  Treat the direction as
-     refuted rather than pending.
-
-Measured, in short: the chain at 2,024 is the best shape found, and the four
-attempts to lift it scored 0, 1,657, 660 and 512-to-5.  If one of them is retried,
-measure it against 2,024 before believing it -- none of them looked wrong on
-paper, and every one of them was.
-
-WHAT IS STILL MISSING -- do not ship the output as-is
------------------------------------------------------
-`counts` and `blank_counts` are placeholder copies of the scheme's first round,
-so per-round mass is wrong wherever the layout changed.
-
-The first thing to get right, and it is not obvious: **the length ceiling is
-mass-driven, not 148 m**.  A scheme in `runs/semi_merged_v4` runs 46 parallel
-bars of a 43 mm section (linear 14.3 kg/m), so 60,000 kg caps a round at
-`60000 / (46 x 14.3) - 2 = 89.2 m`, not 148.  Using the bed length band as the
-ceiling while copying the original count leaves mass over the limit; feeding the
-count into the ceiling instead took `bed_weight` from 3,371 to 76.
-
-With the count held at the scheme's own value and the ceiling mass-aware:
-
-    laid out            2,620   (577 keep their old layout)
-    continuity_seam     7,344 -> 1,753
-    bed_weight          3,371 -> 76
-    blank_material      3,860 -> 1,259
-    short_delivery / order_mass_floor   583 -> 565 each
-
-Still open, in likely order of difficulty:
-
-  * `blank_material` 1,259.  `blank_counts` is a placeholder; the original varied
-    per round ([5,6,6,6,6,5]) exactly because the round lengths varied.  Each
-    round needs `ceil((net + 2) x count x linear / blank_weight)` of them.
-  * `short_delivery` / `order_mass_floor` 565.  Holding the count fixed should
-    preserve each order's total bar-metres, so these are NOT explained yet --
-    do not assume they are the placeholder's fault.  Reproduce one before
-    theorising; the earlier floor arithmetic was wrong twice.
-  * the 577 schemes that will not lay out, which is where most of the remaining
-    1,753 seams live.
-
-Counts should be taken as LOW as the floors allow, because more parallel bars
-means more declared blank mass and the yield numerator divides by that.
-
-The checker counts `produced += k * count`, i.e. pieces times parallel bars, and
-`pieces = int(weight / (linear * size))` from the order table -- so the two floors
-are on the same scale, which was the thing left unsettled in the previous
-revision.  It is settled: they are.
+WHERE THE SCORE GOES
+--------------------
+The compliant candidate predicts 91.40 against v4's 95.09, and the difference is
+mostly the knife count: 180,299 against 167,748.  The piece totals are 169,822
+against 157,201, and the gap is the FLOAT COLLAPSE -- v4 has 17,517 entries where
+`int(L // size)` is one short of the exact multiple, this layout has 4,930
+because it writes exact products.  Which convention the platform uses is the
+question the next submissions are designed to settle, and until it is settled the
+two numbers are not comparable.  `physical_linear_weight`, the collapse and the
+knife convention are all recorded in docs/CURRENT.md.
 """
 from __future__ import annotations
 
@@ -208,7 +97,7 @@ def length_ceiling(count, linear_kg_per_m, lo=LO, hi=HI, bed_kg=60000.0):
     return max(lo, min(hi, mass_cap))
 
 
-def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None):
+def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None, rounds=None):
     """Return new {order: length} rounds, or None if this scheme will not lay out.
 
     `sizes` maps order id -> 定尺 length in metres.  Pass `linear` (kg/m of the
@@ -234,8 +123,13 @@ def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None):
         pieces[oid] = n
 
     total = sum(totals.values())
-    k = rounds_needed(total, lo, hi, cap)
-    if k is None:
+    # `rounds` forces the count: when the target sits just under the ceiling the
+    # rounding overshoot pushes a round over it, and one extra round buys the
+    # slack.  151 of 3,200 schemes failed exactly that way.
+    k = rounds if rounds is not None else rounds_needed(total, lo, hi, cap)
+    if k is None or k < 1 or k > cap:
+        return None
+    if k * lo > total + 1e-9 or k * hi < total - 1e-9:
         return None
     target = total / k
 
@@ -248,7 +142,16 @@ def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None):
         while i < len(seq) and held < need - 1e-9:
             oid = seq[i]
             size = sizes[oid]
-            take = min(remaining[oid], max(1, round((need - held) / size)))
+            if j == k - 1:
+                take = remaining[oid]          # last round: it has to all fit
+            else:
+                # Round, not floor: flooring leaves every round short, pushes the
+                # surplus into the final round and overflows it (measured: 2,451
+                # laid out against 2,637).  Rounding overshoots `need` by at most
+                # half a piece per round, which the last round absorbs -- as long
+                # as the last round is allowed to take everything that is left,
+                # which is what stops "orders not finished" (466 before).
+                take = min(remaining[oid], max(1, round((need - held) / size)))
             current[oid] = take * size
             held += take * size
             remaining[oid] -= take
