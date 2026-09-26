@@ -104,6 +104,14 @@ FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
      floor at the end; 71.2%, then 72.4% once quantised.
   4. picking the round count first but not balancing the last round -- fixed by
      targeting total/k everywhere.
+  5. forcing every order to span two rounds by holding one piece back inside the
+     fill loop -- laid out 0 schemes, against 2,024 without it.  Holding a piece
+     back barely lowers `held`, so the loop keeps adding orders until the round
+     overflows `hi` and every scheme is refused.  The out-of-tree version of this
+     idea did the split AFTER laying out and reached 1,657; the in-loop version
+     is not equivalent and was reverted rather than shipped broken.  If you retry
+     it, build the rounds as head/tail pairs per order instead of patching the
+     fill loop.
 
 WHAT IS STILL MISSING -- do not ship the output as-is
 -----------------------------------------------------
