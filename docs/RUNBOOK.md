@@ -1,26 +1,31 @@
-# 运行入口与验证边界
+# 命令入口与验证边界
 
-Python 命令在仓库根运行；Windows 使用 `python -X utf8`。C++ 内核需在目标机器编译，`.exe` 不迁移。
-先看 [CURRENT](CURRENT.md)，源码中的旧算法仍能运行，但不是可提交认证。
+统一使用 `python -X utf8 aic.py <命令>`。所有相对路径以项目根为基准；工具子进程继承 src 导入路径。
+`aic.py` 不需要 pip 安装，使用 Python 标准库；它支持从仓库外通过绝对路径启动。
 
-| 任务 | 入口 |
+| 任务 | 命令 |
 |---|---|
-| 复赛原始输入与规范化数据 | `data/semi/`；`prepare_semi.py`（会写数据，先保留原件） |
-| 求解与恢复参数 | `python -X utf8 solve_semi.py --help` |
-| 进程监督 | `python -X utf8 task_watcher.py --help`；长期任务不要密集轮询 |
-| 岛级监督 | `python -X utf8 supervise_island.py --help` |
-| 跨岛择优 | `python -X utf8 diagnostics/merge_chunks.py --help` |
-| 打包参数 | `python -X utf8 build_submission.py --help`；当前仍有旋转步骤，输出需新判据复核 |
-| 本地模型回归 | `python -X utf8 -m unittest test_platform_score test_semi_rules test_semi_check test_semi_solver` |
-| 自动打榜 | [new_mcp README](https://github.com/WRw5w/new_mcp/blob/main/README.md) |
+| 参数帮助 | `python -X utf8 aic.py --help` |
+| 全部现行回归 | `python -X utf8 aic.py test` |
+| 指定回归 | `python -X utf8 aic.py test test_platform_score test_semi_check` |
+| 数据预处理 | `python -X utf8 aic.py prepare --help`（会写 data，执行前保留原件） |
+| 求解 | `python -X utf8 aic.py solve --help` |
+| 单进程监督 | `python -X utf8 aic.py watch --help`（使用原 task_watcher，禁止密集轮询） |
+| 岛级监督 | `python -X utf8 aic.py supervise --help` |
+| 跨岛合并 | `python -X utf8 aic.py merge --help` |
+| 打包 | `python -X utf8 aic.py build --help` |
+| 校验/估分/ZIP验证 | `python -X utf8 aic.py check --help` / `score --help` / `verify --help` |
+| 历史判据复算 | `python -X utf8 aic.py audit-clause6` / `audit-packages` |
+| 重建历史报告 | `python -X utf8 aic.py resync --help`（会写报告；不改 ZIP） |
 
-测试通过只说明现有实现满足其测试，不能证明条款 6 已正确或某包可提交。
-`diagnostics/clause6_rotation_falsified.py` 仍仅演示旧 B 与排序的差异，不实现本次审查的候选式；
-`diagnostics/verify_clause6_readings.py` 的“safe”输出仍有旧含义，不能直接采信。
+输入在 `data/semi/`；七个旧复赛候选在 `artifacts/rejected/`；新打包默认写入 `artifacts/candidates/`。
+`src/build_submission.py` 仍有旋转步骤；`tools/analysis/` 中两个旧审查脚本的“safe”“no-op”等结论仍有历史局限。
+运行它们只用于复算旧模型，不能放行包；候选新判据见 [EVIDENCE](EVIDENCE.md)。
 
-## 复用检查点
+## 测试与检查点
 
-1. 先从迁移档案恢复 runs，列出岛、chunks 数量及各自配置/种子。
-2. 以实际文件核对完整性，不能根据 9 月 23 日未完成列表直接重跑。
-3. 对候选应用修正后的独立校验；旧模型高分不能作为择优唯一条件。
-4. 旧命令配方在 [历史档案](archive/README.md) 中，按路径取用；缺少输入时先恢复，避免意外从头长跑。
+- 活跃回归在 `tests/`；初赛反馈样本移入 `tests/fixtures/prelim/`，它们仍验证基础计分逻辑，没有作为无用数据删除。
+- `runs/platform_fix/result.json` 是未入库的可选初赛运行产物；没有时该项显式跳过。整理前这一项因缺文件报错。
+- 退役初赛内核/实验测试随完整工作区归档；需复现实验时解压快照，不要求复赛工作区安装旧 exe。
+- 先恢复实际 runs，再检查岛配置、chunks 和完成状态；不能按旧日志自动重跑。
+- 所有测试只约束现有实现，不证明未知官方判据已解决。

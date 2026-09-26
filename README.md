@@ -1,20 +1,39 @@
-# 棒材组合订单锯切优化：复赛工作入口
+# 棒材锯切复赛工作区
 
-本分支处理 1 万单复赛；Git 分支名 `semi-final` 不表示当前已进入 2 万单半决赛。
-队伍：鱼不吃猫，参赛编号 `AIC-2026-93096493`。
+先读 [当前状态](docs/CURRENT.md)。本项目处理 1 万单复赛；现有七个候选尚不能直接放行。
 
-**先读 [当前状态](docs/CURRENT.md)，再按任务查表。现有七个复赛候选没有可直接放行的包；本地高分不等于官方有效分。**
+```text
+aic.py       统一命令入口
+src/         复赛求解、校验、打包与监督代码
+tests/       回归测试，以及仍被测试使用的初赛样本
+data/        输入、规范化数据与复赛原始数据包
+artifacts/   候选与历史拒绝包（产物，不是源码）
+evidence/    官方 PDF、原始违规样本及校准证据
+tools/       跨岛合并和审查工具
+docs/        当前状态、规则、证据解释、计划与迁移
+archives/    整理前完整受跟踪工作区的压缩快照和路径清单
+```
 
-| 要做什么 | 只读这些 |
+在任意目录使用本项目 `aic.py` 的绝对路径，或在仓库根执行：
+
+```powershell
+python -X utf8 aic.py --help
+python -X utf8 aic.py test
+python -X utf8 aic.py solve --help
+python -X utf8 aic.py merge --help
+```
+
+命令中的相对路径统一相对于项目根；调用者可传绝对路径。搜索输出放 `runs/`（忽略入库），打包默认放 `artifacts/candidates/`。
+
+| 任务 | 文档 |
 |---|---|
-| 接手工作、确定下一步 | [当前状态](docs/CURRENT.md) → [解决顺序](docs/PLAN.md) |
-| 实现或审查约束 | [复赛规则](RULES.md) → [条款 6 证据](docs/EVIDENCE.md) |
-| 恢复机器和检查点 | [迁移说明](MIGRATION.md) |
-| 查入口、命令和测试 | [运行说明](docs/RUNBOOK.md) |
-| 操作自动打榜 MCP | [new_mcp](https://github.com/WRw5w/new_mcp) 的 README |
-| 查初赛过程、旧推断或原始交接 | [压缩档案索引](docs/archive/README.md)，按需解压 |
+| 接手与下一步 | [当前状态](docs/CURRENT.md)、[解决顺序](docs/PLAN.md) |
+| 实现/审查约束 | [复赛规则](docs/RULES.md)、[证据边界](docs/EVIDENCE.md) |
+| 命令与测试 | [运行说明](docs/RUNBOOK.md) |
+| 恢复机器 | [迁移说明](docs/MIGRATION.md) |
+| 查旧路径、恢复初赛程序 | [工作区档案](archives/README.md) |
+| 查旧文档原文 | [知识档案](docs/archive/README.md) |
+| 查看整理验收 | [工作区整理](docs/WORKSPACE.md)、[前次文档压缩](docs/ARCHIVE_AUDIT.md) |
 
-源码、输入数据、现有提交 ZIP、校准 JSON、官方 PDF 均保留原路径。历史算法仍在仓库中供复算，不能从文件名推断其适用于复赛。
-本次只整理知识档案；没有实现条款 6 修复、运行求解或提交比赛。
-
-本轮压缩依据及验收：[档案整理报告](docs/ARCHIVE_AUDIT.md)。
+本次调整目录与调用路径，没有修正评分/条款 6 算法，也没有提交比赛。本地检查通过仍不是官方认证。
+MCP 位于独立的 [new_mcp 仓库](https://github.com/WRw5w/new_mcp/tree/codex/migration-archive-cleanup)。

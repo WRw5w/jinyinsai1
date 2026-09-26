@@ -26,6 +26,6 @@ python -m zipfile -e docs/archive/knowledge-before-20260926.zip ../jinyinsai1_hi
 ```
 
 查阅后只更新有价值的现行事实，不把整份历史重新粘入入口。
-旧路径保留短指针；初赛拒绝标记、legacy README、专用算法说明保留原文供定向使用。
+文档整理阶段曾保留旧路径短指针；后续完整工作区整理已收纳部分旧目录，最新路径见 [工作区清单](../../archives/workspace-manifest.json)。
 
 整理依据与验收结果见 [信息密度评估](../ARCHIVE_AUDIT.md)。

@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-26",
+  "source_commit": "cfe33a3dc16c0ff2600b4a1d1375af32c52fc27f",
+  "root_entries_before": 128,
+  "visible_root_entries_after": 12,
+  "tracked_bytes_before": 39642058,
+  "working_bytes_after_before_report": 32188484,
+  "archive_bytes": 13209016,
+  "archived_files": 383,
+  "retired_paths": 282,
+  "relocated_paths": 69,
+  "regression": {
+    "solver_run": 67,
+    "solver_passed": 66,
+    "solver_skipped": 1,
+    "mcp_passed": 35
+  },
+  "archive_sha256": "b14d0bba4b735207c7debcdcd4457c1602403ef1e0f8fd1be6c940c9316f7d6d",
+  "root_entries_after": 15
+}

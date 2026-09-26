@@ -35,7 +35,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
 
 from platform_check import check as platform_check            # noqa: E402
 from platform_score import evaluate as platform_evaluate      # noqa: E402
@@ -101,13 +101,13 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('packages', nargs='*', help='package directories')
     ap.add_argument('--all', action='store_true',
-                    help='every submission_semi_* directory under the repo root')
+                    help='every submission_semi_* directory under artifacts/rejected')
     ap.add_argument('--data', default='data/semi')
     args = ap.parse_args()
 
     pkgs = [ROOT / p for p in args.packages]
     if args.all:
-        pkgs = sorted(p for p in ROOT.glob('submission_semi_*') if p.is_dir())
+        pkgs = sorted(p for p in (ROOT / 'artifacts/rejected').glob('submission_semi_*') if p.is_dir())
     if not pkgs:
         ap.error('name at least one package, or pass --all')
 
