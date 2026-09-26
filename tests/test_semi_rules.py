@@ -1,15 +1,22 @@
 """Semi-final (复赛) rule arithmetic: knives, coverage, continuity, round cap.
 
-These assertions come from the semi-final `constraints.txt` and the PDF's own
-worked example.  None of them is calibrated against an official feedback, because
-no semi-final feedback exists yet -- they encode the written rule, and the point
-of the file is to make any later contradiction cheap to localise.
+Most assertions come from the semi-final `constraints.txt` and the PDF's own
+worked example.  The receipt regression at the bottom is different: it is pinned
+against four official 2026-09-26 score rows (the submission night), which settled
+the knife reading (nearest integer, not floor), the yield numerator (order-side,
+Σ min(physical delivered, required)) and the weight table (0.4/0.4/0.2/0).  The
+lower half of the file keeps the written-rule cases so a later contradiction is
+cheap to localise.
 """
 import math
 import unittest
+from pathlib import Path
 
+from platform_check import read_plan
 from platform_score import (Rules, ScoringData, ScoringOrder, detect_violations,
                             evaluate, row_metrics, score_components)
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def order(size_m, diameter_mm=20.0, linear=None):
@@ -115,19 +122,22 @@ class SemiRuleTests(unittest.TestCase):
                                report['score_capped'] - 5.0, places=12)
 
     def test_weight_table_reproduces_the_pdf_and_the_qa_reading(self):
-        """The PDF prints four 40/30/20/10 terms; RULES.md records a Q&A claim.
+        """PDF prints 40/30/20/10; RULES.md records the Q&A claim (40/40/20/0).
 
-        Both are exposed so the same plan can be priced either way; the PDF form is
-        the default because it is the written rule.
+        Settled 2026-09-26: the Q&A reading is operative.  Of the four official
+        semi-final receipts only 0.4*K + 0.4*Y + 0.2*C reproduces every displayed
+        total (the PDF table would need a time subscore equal to each plan's own
+        yield).  The default now carries the certified weights; the PDF table stays
+        available as an explicit override for historical comparisons.
         """
         finished, raw, coverage, knives = 95.0, 100.0, 1.0, 90000
-        pdf = score_components(knives, finished, raw, coverage, Rules.semi())
+        model_b = score_components(knives, finished, raw, coverage, Rules.semi())
+        # 0.4*100 + 0.4*95 + 0.2*100
+        self.assertAlmostEqual(model_b['score_capped'], 98.0, places=12)
+        pdf = score_components(knives, finished, raw, coverage,
+                               Rules.semi(weights=(0.4, 0.3, 0.2, 0.1)))
         # 0.4*100 + 0.3*95 + 0.2*100 + 0.1*100
         self.assertAlmostEqual(pdf['score_capped'], 98.5, places=12)
-        qa = score_components(knives, finished, raw, coverage,
-                              Rules.semi(weights=(0.4, 0.4, 0.2, 0.0)))
-        # 0.4*100 + 0.4*95 + 0.2*100
-        self.assertAlmostEqual(qa['score_capped'], 98.0, places=12)
 
     def test_semi_knives_are_below_prelim_knives_on_multi_order_rounds(self):
         """Sanity: the semi-final rule is a strict saving once a round is shared."""
@@ -138,6 +148,39 @@ class SemiRuleTests(unittest.TestCase):
         self.assertEqual(semi['knives'], 11)      # 5 + 3 + 2 segments, +1
         self.assertEqual(prelim['knives'], 13)    # (5+1) + (3+1) + (2+1)
         self.assertLess(semi['knives'], prelim['knives'])
+
+
+class OfficialReceiptTests(unittest.TestCase):
+    """The four 2026-09-26 receipts, reproduced by the scorer exactly.
+
+    Each candidate ZIP was submitted and the platform returned a row with
+    刀数/成材率/覆盖率/总分.  The scorer must reproduce all four numbers for every
+    package -- that is the whole calibration of the semi rule set.  The ZIPs live
+    under the gitignored `artifacts/candidates/`, so the cases skip when the
+    working tree has been cleaned.
+    """
+
+    RECEIPTS = {
+        'cand_rounded': (185229, 91.39, 97.43, 90.59),
+        'cand_covprobe25': (185233, 91.40, 96.46, 90.40),
+        'cand_covprobe': (185252, 91.41, 93.81, 89.87),
+        'cand_yieldprobe': (185229, 87.21, 97.43, 88.92),
+    }
+
+    def test_official_receipts_are_reproduced(self):
+        for name, (knives, yield_pct, coverage_pct, total) in self.RECEIPTS.items():
+            folder = ROOT / 'artifacts/candidates' / name
+            zips = sorted(folder.glob('*.zip')) if folder.is_dir() else []
+            if not zips:
+                self.skipTest(f'candidate artifact missing: {name} (gitignored tree)')
+            report = evaluate(read_plan(zips[0]), ROOT / 'data/semi', round_name='semi')
+            with self.subTest(candidate=name):
+                self.assertEqual(report['knives'], knives)
+                self.assertEqual(report['yield_percent_rounded'], yield_pct)
+                self.assertEqual(report['coverage_percent_rounded'], coverage_pct)
+                self.assertEqual(report['score_capped_display'], total)
+                self.assertEqual(report['violation_count'], 0)
+                self.assertEqual(report['included_order_count'], 9999)
 
 
 if __name__ == '__main__':

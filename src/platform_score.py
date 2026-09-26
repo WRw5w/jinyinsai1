@@ -12,9 +12,16 @@ Two rule sets live here, selected by `Rules.round`:
   requires two orders to share one cold-bed round; a scheme is capped at 6 rounds
   and an order's rounds must be consecutive.
 
-The two modes share the mass model, because the mass model did not change:
-the yield numerator uses the diameter truncated to whole millimetres (pinned by
-the 96.29% / 96.42% feedbacks) while physical checks keep full precision.
+The two modes share the mass model, because the mass model did not change --
+but the two rounds read it differently, settled 2026-09-26 against four official
+semi-final receipts:
+
+* preliminary: the yield numerator is the delivered mass at the diameter
+  truncated to whole millimetres (pinned by the 96.29% / 96.42% feedbacks);
+* semi-final: the numerator is Σ min(physical delivered, required) per order --
+  on every one of our plans numerically Σ订单重量, an order-side constant.
+
+Physical checks keep full precision in both modes.
 """
 from __future__ import annotations
 
@@ -61,7 +68,12 @@ class Rules:
                      (0.4, 0.3, 0.2, 0.1), baseline_knives)
 
     @staticmethod
-    def semi(baseline_knives=160000.0, weights=(0.4, 0.3, 0.2, 0.1), max_rounds=6):
+    def semi(baseline_knives=160000.0, weights=(0.4, 0.4, 0.2, 0.0), max_rounds=6):
+        # SETTLED 2026-09-26: the operative semi-final weights are (40, 40, 20, 0).
+        # The PDF's (40, 30, 20, 10) with a time subscore of 100 fits only three of
+        # the four receipts; 88.92 needs T = 87.18 for cand_yieldprobe, i.e. exactly
+        # that plan's own yield -- the "time is folded into yield" collapse.  Model B
+        # 0.4K + 0.4Y + 0.2C reproduces all four displayed totals to the last digit.
         return Rules('semi', 'round', True, max_rounds, True, weights, baseline_knives)
 
 
@@ -190,25 +202,20 @@ def row_metrics(length_scheme, parallel, blank_type, blank_count, scoring_data, 
         segments = 0
         for oid, length in length_scheme.items():
             order = scoring_data.orders[oid]
-            segments += int(length // order.size_m)
+            # SETTLED 2026-09-26 (four official receipts, 185229/185233/185252/
+            # 185229): the platform reads the written length as the nearest-
+            # integer number of 定尺 pieces.  `int(L // size)` is one short for
+            # 8,003 of the 17,029 written entries because those decimals are one
+            # ulp below their integer multiple as binary doubles; truncation and
+            # the epsilon floor are off by 3.3k and 4.0k knives respectively.
+            # Every valid plan writes lengths on the 定尺 grid, where py round,
+            # half-up, whole-mm integer and exact decimal all agree.
+            segments += round(length / order.size_m)
             finished += length * parallel * order.linear_weight
         knives = segments + 1
     else:
         raise ValueError(f'unknown knife_add_per: {rules.knife_add_per!r}')
     return knives, finished, blank_count * scoring_data.blank_weights[blank_type]
-
-
-def _demand_numerator_mass(order):
-    """Yield-numerator ceiling for one order: the mass of its DEMAND, not delivery.
-
-    The semi-final counts over-production as free but yield-less, so an order's
-    contribution to the yield numerator is capped at the mass of the pieces it
-    actually demanded.  The demand piece count mirrors the solver's
-    `ceil(weight / (size * physical_linear_weight))`; the credited mass then uses
-    the scoring (integer-diameter) linear weight, exactly as `row_metrics` does.
-    """
-    pieces = math.ceil(order.required_kg / (order.size_m * order.physical_linear_weight))
-    return pieces * order.size_m * order.linear_weight
 
 
 # ===========================================================================
@@ -369,7 +376,7 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
 
     context = scoring_data if scoring_data is not None else load_scoring_data(data, round_name)
     knives, finished, physical_finished, raw = 0, 0.0, 0.0, 0.0
-    delivered_mass = {}      # semi only: oid -> scoring-diameter mass already credited
+    delivered_physical = {}  # semi only: oid -> physical (raw-diameter) mass delivered
     rows = entries = 0
     included, combined = set(), set()
     for batch in plan:
@@ -390,17 +397,17 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
             k, f, r = row_metrics(scheme, parallel, batch['blank_type'], stock, context, rules)
             knives += k
             if rules.round == 'semi':
-                # Cap the yield numerator at each order's demand: over-production is
-                # free but earns no yield in the semi-final.  Credit only the part of
-                # this row that does not push the order past its demand mass.  (The
-                # preliminary round keeps its calibrated uncapped numerator.)
+                # SETTLED 2026-09-26 (reconciliation, 4/4 receipts): the yield
+                # numerator is Σ min(physical delivered, required) per order --
+                # numerically Σ订单重量 on every plan of ours, because no order is
+                # ever delivered short.  It is capped at the ORDER's registered
+                # weight, not at any piece count, and it does not depend on the
+                # delivery at all as long as the demand is met.  The preliminary
+                # round keeps its calibrated uncapped delivered numerator.
                 for oid, length in scheme.items():
                     order = context.orders[oid]
-                    row_mass = length * parallel * order.linear_weight
-                    ceiling = _demand_numerator_mass(order)
-                    before = delivered_mass.get(oid, 0.0)
-                    finished += max(0.0, min(before + row_mass, ceiling) - min(before, ceiling))
-                    delivered_mass[oid] = before + row_mass
+                    delivered_physical[oid] = (delivered_physical.get(oid, 0.0)
+                                               + length * parallel * order.physical_linear_weight)
             else:
                 finished += f
             raw += r
@@ -408,6 +415,9 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
             entries += len(scheme)
             physical_finished += sum(length * parallel * context.orders[oid].physical_linear_weight
                                      for oid, length in scheme.items())
+    if rules.round == 'semi':
+        finished = sum(min(mass, context.orders[oid].required_kg)
+                       for oid, mass in delivered_physical.items())
     violations, violation_detail = detect_violations(plan, context, rules)
     violation_count = sum(violations.values())
     coverage = len(combined) / len(context.orders)
@@ -432,8 +442,9 @@ def evaluate(plan, data=Path('data'), *, scoring_data=None, rules=None,
         evidence=['diagnostics/knife_calibration.json', 'diagnostics/yield_semantics.json'],
         calibrated_observations=(
             'Preliminary knife counts are exact and displayed yields match all seven official '
-            'feedbacks. Semi-final knives and coverage follow constraints.txt and PDF 六/九 and '
-            'are unverified against any official feedback, because none exists yet.'
+            'feedbacks. Semi-final knives, yield and coverage were certified 2026-09-26 by four '
+            'official receipts (185229/185233/185252/185229 knives, 91.39/91.40/91.41/87.21% '
+            'yield, 97.43/96.46/93.81% coverage); the model reproduces every one exactly.'
         ),
         assumptions=dict(
             baseline_knives=rules.baseline_knives, time_subscore=rules.time_subscore,
