@@ -45,26 +45,42 @@ FOUR DEAD ENDS, ALL RECORDED BECAUSE EACH LOOKS RIGHT AT FIRST
 WHAT IS STILL MISSING -- do not ship the output as-is
 -----------------------------------------------------
 `counts` and `blank_counts` are placeholder copies of the scheme's first round,
-so per-round mass is wrong wherever the layout changed.  `platform_check` on the
-laid-out plan:
+so per-round mass is wrong wherever the layout changed.
 
-    blank_material       3860   round mass > declared blank material
-    bed_weight           3371   round mass > 60,000 kg
-    short_delivery        583   pieces cut < pieces demanded
-    order_mass_floor      583   mass allocated to an order < that order's weight
+The first thing to get right, and it is not obvious: **the length ceiling is
+mass-driven, not 148 m**.  A scheme in `runs/semi_merged_v4` runs 46 parallel
+bars of a 43 mm section (linear 14.3 kg/m), so 60,000 kg caps a round at
+`60000 / (46 x 14.3) - 2 = 89.2 m`, not 148.  Using the bed length band as the
+ceiling while copying the original count leaves mass over the limit; feeding the
+count into the ceiling instead took `bed_weight` from 3,371 to 76.
 
-The masses are all of the form `count x linear x (length + 2)`, and the floors
-are `k x size x count x linear >= weight` and `k x count >= pieces`, so per round
-the count is bounded above by `60000 / ((net + 2) x linear)` and
-`2000 / diameter`, and below by each resident order's floor.  In the chain each
-round holds at most two orders and each order sits in one or two rounds, so this
-is a small per-scheme system rather than a global one.  Counts should be taken as
-LOW as the floors allow, because more parallel bars means more declared blank
-mass and the yield numerator divides by that.
+With the count held at the scheme's own value and the ceiling mass-aware:
 
-Note the checker counts `produced += k * count`, i.e. pieces times parallel bars,
-so `produced >= order['pieces']` needs `order['pieces']` to be on the same scale.
-Confirm that before trusting the delivery floor -- it was not settled here.
+    laid out            2,620   (577 keep their old layout)
+    continuity_seam     7,344 -> 1,753
+    bed_weight          3,371 -> 76
+    blank_material      3,860 -> 1,259
+    short_delivery / order_mass_floor   583 -> 565 each
+
+Still open, in likely order of difficulty:
+
+  * `blank_material` 1,259.  `blank_counts` is a placeholder; the original varied
+    per round ([5,6,6,6,6,5]) exactly because the round lengths varied.  Each
+    round needs `ceil((net + 2) x count x linear / blank_weight)` of them.
+  * `short_delivery` / `order_mass_floor` 565.  Holding the count fixed should
+    preserve each order's total bar-metres, so these are NOT explained yet --
+    do not assume they are the placeholder's fault.  Reproduce one before
+    theorising; the earlier floor arithmetic was wrong twice.
+  * the 577 schemes that will not lay out, which is where most of the remaining
+    1,753 seams live.
+
+Counts should be taken as LOW as the floors allow, because more parallel bars
+means more declared blank mass and the yield numerator divides by that.
+
+The checker counts `produced += k * count`, i.e. pieces times parallel bars, and
+`pieces = int(weight / (linear * size))` from the order table -- so the two floors
+are on the same scale, which was the thing left unsettled in the previous
+revision.  It is settled: they are.
 """
 from __future__ import annotations
 
@@ -90,11 +106,27 @@ def rounds_needed(total, lo=LO, hi=HI, cap=MAX_ROUNDS):
     return k
 
 
-def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS):
+def length_ceiling(count, linear_kg_per_m, lo=LO, hi=HI, bed_kg=60000.0):
+    """The bed's 60 t limit expressed as a round length, which is usually tighter.
+
+    A scheme runs `count` bars side by side of one section, so a round of `net`
+    metres weighs `(net + 2) x count x linear`.  With 46 bars of a 43 mm section
+    that caps a round near 89 m, well inside the 148 m the bed length allows --
+    using the length band as the ceiling is what left `bed_weight` failing.
+    """
+    mass_cap = bed_kg / (count * linear_kg_per_m) - 2.0
+    return max(lo, min(hi, mass_cap))
+
+
+def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None):
     """Return new {order: length} rounds, or None if this scheme will not lay out.
 
-    `sizes` maps order id -> 定尺 length in metres.
+    `sizes` maps order id -> 定尺 length in metres.  Pass `linear` (kg/m of the
+    scheme's section) and `hi` is tightened to whatever the bed weight allows;
+    otherwise the raw length band is used and some rounds come out overweight.
     """
+    if linear:
+        hi = length_ceiling(scheme['counts'][0], linear, lo=lo, hi=hi)
     totals = {}
     for rnd in scheme['length_scheme']:
         for oid, length in rnd.items():
@@ -142,14 +174,19 @@ def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS):
     return rounds
 
 
-def relayout(plan, sizes, cap=MAX_ROUNDS):
-    """Apply `layout` to every multi-order scheme.  Returns (plan, stats)."""
+def relayout(plan, sizes, cap=MAX_ROUNDS, linear=None):
+    """Apply `layout` to every multi-order scheme.  Returns (plan, stats).
+
+    `linear` maps order id -> kg/m.  Pass it: without it the length ceiling stays
+    at the raw bed band and rounds come out over the 60 t limit.
+    """
     laid = skipped = 0
     for scheme in plan:
         if len(scheme.get('orders') or []) < 2:
             skipped += 1
             continue
-        rounds = layout(scheme, sizes, cap=cap)
+        lin = linear.get(scheme['orders'][0]) if linear else None
+        rounds = layout(scheme, sizes, cap=cap, linear=lin)
         if rounds is None:
             skipped += 1
             continue
@@ -163,17 +200,20 @@ def relayout(plan, sizes, cap=MAX_ROUNDS):
 
 
 def load_sizes(root, round_name='semi'):
+    """定尺 length and kg/m for every order, straight from the scoring data."""
     sys.path.insert(0, str(Path(root) / 'src'))
     from platform_score import load_scoring_data            # noqa: E402
     ctx = load_scoring_data(Path(root) / f'data/{round_name}', round_name)
-    return {oid: order.size_m for oid, order in ctx.orders.items()}
+    return ({oid: order.size_m for oid, order in ctx.orders.items()},
+            {oid: order.linear_weight for oid, order in ctx.orders.items()})
 
 
 def main():
     root = Path(__file__).resolve().parents[2]
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else root / 'runs/semi_merged_v4/result.json'
     plan = json.loads(Path(src).read_text(encoding='utf-8'))
-    _, stats = relayout(plan, load_sizes(root))
+    sizes, linear = load_sizes(root)
+    _, stats = relayout(plan, sizes, linear=linear)
     print(json.dumps(stats, ensure_ascii=False))
 
 

@@ -96,7 +96,8 @@ class ChainLayoutTests(unittest.TestCase):
         plan = json.loads(REAL_PLAN.read_text(encoding='utf-8'))
         before = candidate.count_boundaries(plan)
         self.assertGreater(before, 0)
-        laid, stats = chain_layout.relayout(plan, chain_layout.load_sizes(ROOT))
+        sizes, linear = chain_layout.load_sizes(ROOT)
+        laid, stats = chain_layout.relayout(plan, sizes, linear=linear)
         after = candidate.count_boundaries(laid)
         self.assertEqual(candidate.count_order_gaps(laid), 0,
                          'the layout must not introduce a skipped round')
