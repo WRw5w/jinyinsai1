@@ -35,5 +35,5 @@ python -X utf8 aic.py merge --help
 | 查旧文档原文 | [知识档案](docs/archive/README.md) |
 | 查看整理验收 | [工作区整理](docs/WORKSPACE.md)、[前次文档压缩](docs/ARCHIVE_AUDIT.md) |
 
-本次调整目录与调用路径，没有修正评分/条款 6 算法，也没有提交比赛。本地检查通过仍不是官方认证。
-MCP 位于独立的 [new_mcp 仓库](https://github.com/WRw5w/new_mcp/tree/codex/migration-archive-cleanup)。
+本次调整目录与调用路径；其后已按候选判据**修正两个生产校验器**，并加了一组对照四个官方回执的锚点测试（`tests/test_clause6_anchors.py`）。条款 6 的结构修复仍是原型，见 [当前状态](docs/CURRENT.md)。仍未提交比赛，本地检查通过也不等于官方认证。
+MCP 位于独立的 [new_mcp 仓库](https://github.com/WRw5w/new_mcp)。
