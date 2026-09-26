@@ -53,7 +53,7 @@
 | `cand_sp1` | `d993957f-3f64-4550-933c-8d857e033f89` | 92.1508（Q→S→R 谱系；曾计划进五发，让位给二级不动点 cy1） |
 | `cand_rp5` | `a1753376-2617-4302-ba10-343efee78cfe` | 92.1406（重打包+共享谱系） |
 | `cand_rf3` | `8a5766ee-1f76-44f0-8cff-a1500c005871` | 92.1087（重打包谱系） |
-| （`runs/_trsplit6.json`，未打包） | — | 92.1516（重打包谱系；`aic.py build --input runs/_trsplit6.json` 30 秒可出） |
+| `cand_trsplit6` | 未入队（窗口按路径直发即可） | 92.1516（重打包谱系；09-26 深夜已打包 `artifacts/candidates/cand_trsplit6/`，过 MCP 独立校验，sha256 `11790196…`） |
 | `cand_p_full8` | `b8f19bce-399f-441c-b3b2-672b2058e336` | 92.0775（在五发里） |
 | `cand_p_full2` | `3323c148-f758-4ca3-8630-ac2fffeeece0` | 92.0736 |
 | `cand_p_shift2` | `1749cd17-da82-47c5-a6b5-0ee4fd6f8d29` | 92.0119（覆盖率 99.87，独立谱系） |

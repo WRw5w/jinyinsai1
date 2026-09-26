@@ -281,8 +281,9 @@ QSR（`cyc2`）、SRQ（`spcy`）、QRS（`cyqrs`）、RQS（`cyrqs`）、RSQ（
 sha256 `13b8b017434f9139928ec6a6aef2d368eca593a4bf66c3da259b60407cda1a20`，本地
 **92.15723882698761**，2,275 批）与 `runs/_qs1.json`（= `cand_qs1`，队列 `6822d5cd`，
 sha256 `562747594a78de8ea230aac43741b3073a2cccc56c87bafef140bca241a49876`，本地
-92.15543350668058）。`rsplit` 的落点 `runs/_trsplit6.json` 没打包（与它们同谱系，
-`aic.py build --input runs/_trsplit6.json` 30 秒可出）。
+92.15543350668058）。`rsplit` 的落点 `runs/_trsplit6.json` 已于 09-26 深夜打包为
+`cand_trsplit6`（`artifacts/candidates/cand_trsplit6/`，本地 92.15160570665073，sha256
+`117901965088ada8…`，过 MCP 独立校验），列在窗口回退表。
 **轨迹是可逐字节复现的**：`splitfirst` 整条链重跑一遍，最后一阶段的产物与第一次的哈希完全相同
 （`4db8d009f46b76de…`）；`_cy1` 就是 `cyc` 第七阶段的 `_tcyc7.json`。复现（每阶段跑到 stats 的
 `cost_delta_kg_equivalent == 0.0` 即停；其余轨迹见 `runs/_traj.py` 的 `TRAJECTORIES`）：
