@@ -2164,7 +2164,7 @@
       "path": "submission_ours_94/validation_report.json",
       "bytes": 769,
       "sha256": "9b9c21395b19b5f05a90a28db1599e331d20deef44065d4398117b8b766e09a5",
-      "current_path": "artifacts/rejected/submission_ours_94/validation_report.json",
+      "current_path": "artifacts/rejected/submission_ours_94/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {
@@ -2192,7 +2192,7 @@
       "path": "submission_ours_seed/validation_report.json",
       "bytes": 771,
       "sha256": "2abf769e48ffdf0c6ec655b8edd0a6bf5b06368f15050a3fa22d2117ff5e08a1",
-      "current_path": "artifacts/rejected/submission_ours_seed/validation_report.json",
+      "current_path": "artifacts/rejected/submission_ours_seed/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {
@@ -2332,7 +2332,7 @@
       "path": "submission_semi_FIXED/validation_report.json",
       "bytes": 772,
       "sha256": "18c5a3809b7d153ccba5bcfe48fde87529fe575fab319edc9b1aa23384e6ff5f",
-      "current_path": "artifacts/rejected/submission_semi_FIXED/validation_report.json",
+      "current_path": "artifacts/rejected/submission_semi_FIXED/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {
@@ -2367,7 +2367,7 @@
       "path": "submission_semi_merged_v2/validation_report.json",
       "bytes": 776,
       "sha256": "4e1db39b11252520dcb12350d24711c4ff1b9c2d38af4daa105b40b8d923fbba",
-      "current_path": "artifacts/rejected/submission_semi_merged_v2/validation_report.json",
+      "current_path": "artifacts/rejected/submission_semi_merged_v2/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {
@@ -2395,7 +2395,7 @@
       "path": "submission_semi_merged_v4/validation_report.json",
       "bytes": 791,
       "sha256": "294aa172cf819e2229db4d4995c4088bdc939ba258fbd91660eecd7224706007",
-      "current_path": "artifacts/rejected/submission_semi_merged_v4/validation_report.json",
+      "current_path": "artifacts/rejected/submission_semi_merged_v4/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {
@@ -2430,7 +2430,7 @@
       "path": "submission_semi_nolimit/validation_report.json",
       "bytes": 774,
       "sha256": "ddccdadf6faf177a7059d9d467f2fa60652c3cdd46df44445b8f91419598ff82",
-      "current_path": "artifacts/rejected/submission_semi_nolimit/validation_report.json",
+      "current_path": "artifacts/rejected/submission_semi_nolimit/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {
@@ -2458,7 +2458,7 @@
       "path": "submission_semi_safety/validation_report_source.json",
       "bytes": 773,
       "sha256": "03f187f2fc550fb18ba0298a48e198e50c2dfba51bb932ece3be2225fa3747a1",
-      "current_path": "artifacts/rejected/submission_semi_safety/validation_report_source.json",
+      "current_path": "artifacts/rejected/submission_semi_safety/validation_report_legacy_B.json",
       "action": "relocated"
     },
     {

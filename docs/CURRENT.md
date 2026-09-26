@@ -18,7 +18,9 @@
 `submission_semi_nolimit`、`submission_semi_safety`、`submission_ours_94`、`submission_ours_seed`
 以上目录统一位于 `artifacts/rejected/`，均作为历史候选/回归样本保留，不能直接提交。`FIXED`、`safety` 是历史目录名，不是质量认证。
 七包 ZIP 与旁边 JSON 的解析内容和键顺序已核对一致；部分空白序列化字节不同。
-现有漂移自检只比较 B 违规数量，无法证明任意两份 JSON 一致。
+`audit-clause6` 已改为候选判据复算（7030 / 7342 / 官方示例 0），输出明确标记未认证；生产校验器尚未更换。
+七包现行 `validation_report.json` 均为 `status=unverified`、`passed=false`、`submission_allowed=false`；旧报告逐字节保留为 `validation_report_legacy_B.json`。`resync` 也不会把旧模型通过升级成认证。
+`audit-packages` 的漂移自检仍只比较 B 违规数量，无法证明任意两份 JSON 一致。
 
 ## 优先次序
 

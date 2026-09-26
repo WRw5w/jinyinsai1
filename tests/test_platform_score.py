@@ -200,12 +200,11 @@ class PlatformScoreTests(unittest.TestCase):
         self.assertEqual(sum(violations.values()), 7030,
                          'the rejected package has exactly one violation family')
 
-    def test_repaired_packages_are_clean_under_the_estimator(self):
-        """The repaired packages must show zero violations from the estimator,
-        not merely from platform_check -- the two must agree."""
+    def test_historical_packages_are_not_certified_by_old_estimator(self):
+        """Old model success must never be exposed as current certification."""
         import glob
         checked = 0
-        for d in sorted((ROOT / 'artifacts/rejected').glob('submission_semi_*')):
+        for d in sorted((ROOT / 'artifacts/rejected').glob('submission*')):
             if not d.is_dir():
                 continue
             files = [p for p in glob.glob(str(d / '*.zip'))]
@@ -219,10 +218,13 @@ class PlatformScoreTests(unittest.TestCase):
             if report is None:
                 continue
             recorded = json.loads(report.read_text(encoding='utf-8'))
-            self.assertEqual(recorded.get('violation_count'), 0,
-                             f'{d.name} carries recorded violations')
+            self.assertEqual(recorded['status'], 'unverified')
+            self.assertIs(recorded['passed'], False)
+            self.assertIs(recorded['platform_check_passed'], False)
+            self.assertIs(recorded['submission_allowed'], False)
+            self.assertIsNone(recorded['violation_count'])
             checked += 1
-        self.assertGreater(checked, 0, 'no package reports were inspected')
+        self.assertEqual(checked, 7, 'all seven historical packages must be inspected')
 
 
 if __name__ == '__main__':

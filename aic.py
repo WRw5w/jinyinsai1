@@ -25,7 +25,7 @@ COMMANDS = {
     "compare": "src/compare_candidates.py",
     "smoke": "src/smoke_semi.py",
     "merge": "tools/analysis/merge_chunks.py",
-    "audit-clause6": "tools/analysis/clause6_rotation_falsified.py",
+    "audit-clause6": "tools/analysis/clause6_candidate.py",
     "audit-packages": "tools/analysis/verify_clause6_readings.py",
     "resync": "tools/resync_reports.py",
 }

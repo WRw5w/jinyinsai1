@@ -17,10 +17,11 @@ class WorkspaceLayoutTests(unittest.TestCase):
                 [sys.executable, "-X", "utf8", str(ROOT / "aic.py"), "audit-clause6"],
                 cwd=directory, capture_output=True, text=True, encoding="utf8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
-        # This checks preservation of the old diagnostic, not validity of its model.
-        self.assertIn("7030", result.stdout)
-        self.assertIn("7344", result.stdout)
-        self.assertIn("official anchors: v2 = 7030, v4 = 7342", result.stdout)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["status"], "candidate_not_certified")
+        self.assertFalse(report["submission_allowed"])
+        self.assertEqual({case["name"]: case["boundary_count"] for case in report["cases"]},
+                         {"original_v2": 7030, "rotated_v4": 7342, "official_example": 0})
 
     def test_relocated_competition_artifacts_keep_original_bytes(self):
         manifest = json.loads((ROOT / "archives/workspace-manifest.json").read_text(encoding="utf8"))

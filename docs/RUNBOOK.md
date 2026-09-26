@@ -15,8 +15,9 @@
 | 跨岛合并 | `python -X utf8 aic.py merge --help` |
 | 打包 | `python -X utf8 aic.py build --help` |
 | 校验/估分/ZIP验证 | `python -X utf8 aic.py check --help` / `score --help` / `verify --help` |
-| 历史判据复算 | `python -X utf8 aic.py audit-clause6` / `audit-packages` |
-| 重建历史报告 | `python -X utf8 aic.py resync --help`（会写报告；不改 ZIP） |
+| 候选判据复算 | `python -X utf8 aic.py audit-clause6`（锚点复现，不代表认证） |
+| 历史 B/C/G 对照 | `python -X utf8 aic.py audit-packages`（不能据此放行） |
+| 重建历史报告 | `python -X utf8 aic.py resync --help`（会写未认证报告；不改 ZIP/legacy 原报告；退出 1 表示不可放行） |
 
 输入在 `data/semi/`；七个旧复赛候选在 `artifacts/rejected/`；新打包默认写入 `artifacts/candidates/`。
 `src/build_submission.py` 仍有旋转步骤；`tools/analysis/` 中两个旧审查脚本的“safe”“no-op”等结论仍有历史局限。

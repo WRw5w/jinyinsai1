@@ -1,12 +1,7 @@
-"""Score every readable semi-final package under all three readings of clause 6.
+"""Historical B/C/G diagnostics, not a certification or release gate.
 
-Background: the official 2026-09-23 notice rejected `submission_semi_merged_v2`
-with exactly 7030 `跨轮接续不连续` violations.  Three candidate predicates exist;
-only one reproduces 7030, and the other line's checker implements a different
-one.  See `diagnostics/clause6_predicate_resolved_20260923.md`.
-
-Run:  python -X utf8 diagnostics/verify_clause6_readings.py
-Exit code is non-zero if the 7030 anchor stops being reproduced by reading B.
+B misses known violations. Use aic.py audit-clause6 for the candidate model.
+The copy comparison below only compares B counts, not full JSON equivalence.
 """
 from __future__ import annotations
 
@@ -166,7 +161,7 @@ def zip_json_mismatches(root: Path) -> list[str]:
 
 
 def reading_B(plan) -> int:
-    """Platform predicate: overlap AND tail != head.  Reproduces the official 7030."""
+    """Legacy B: overlap AND tail != head; matching v2 does not certify it."""
     n = 0
     for rounds in rounds_of(plan):
         for left, right in zip(rounds, rounds[1:]):
@@ -223,7 +218,7 @@ def main() -> int:
                 hit += ' / C also hits'
             verdict = f'{hit}  (C off by {c - truth:+d})'
         else:
-            verdict = 'B=0 safe' if b == 0 else f'B flags {b}'
+            verdict = 'legacy B=0 (NOT certified)' if b == 0 else f'B flags {b}'
         print(f'{label:<30}{b:>8}{c:>8}{g:>8}'
               f'{(str(truth) if truth is not None else "-"):>10}  {verdict}')
     print()
@@ -231,9 +226,7 @@ def main() -> int:
         print('FAIL: reading B no longer reproduces the official 7030 anchor.')
         return 1
     print('OK: reading B reproduces the official 7030; reading C does not.')
-    print('    (C is not an approximation of B -- it is both too wide, missing')
-    print('     6230 real violations in the other line\'s package, and too')
-    print('     strict, flagging 6532 legal reorderings in ours.)')
+    print('Historical counts only; B=0 does not imply safety or submission authorization.')
 
     # Deliverable directories carry the plan twice; the .zip is what ships.
     # Drift between the two is a silent 0-point trap -- see the docstring.
@@ -244,7 +237,7 @@ def main() -> int:
         for line in drift:
             print(f'  - {line}')
         return 1
-    print('OK: every package\'s .zip and .json agree (no stale copy can ship).')
+    print('OK: ZIP/JSON legacy B counts agree; full content equivalence is NOT checked.')
 
     # A report must certify the bytes that will actually be uploaded.
     print()

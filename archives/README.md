@@ -6,7 +6,7 @@
 完整原文为 39,642,058 B，ZIP 为 13,209,016 B。
 SHA-256：`b14d0bba4b735207c7debcdcd4457c1602403ef1e0f8fd1be6c940c9316f7d6d`。
 
-[路径清单](workspace-manifest.json) 逐文件记录原路径、原始哈希、整理后路径或 archived 状态；ZIP 内有同一 MANIFEST.json。
+[路径清单](workspace-manifest.json) 逐文件记录原路径、原始哈希、整理后路径或 archived 状态；ZIP 内保留整理当时的 MANIFEST.json；外部清单的 `current_path` 随后续迁移更新。七份原验证报告现在映射到 `validation_report_legacy_B.json`，原路径、字节数、SHA-256 不变。
 原程序的动态路径可能依赖整个旧结构，因此保留完整快照，而不是零散删除实验文件。
 当前源码维护于 src；从快照恢复的源码是历史版本，不作为现行修复成果。
 
