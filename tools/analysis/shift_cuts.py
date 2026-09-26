@@ -616,6 +616,300 @@ def coarsen_mixed(plan, orders, blanks, max_rounds=6, knife_kg=KNIFE_KG):
     return rewritten
 
 
+def lay_pieces(sequence, sizes, floors, count, lin, weight, cap, max_rounds, knife_kg):
+    """The cheapest rounds carrying `floors[oid]` pieces of each order at one count.
+
+    The pieces are laid in the scheme's own order -- each order one contiguous run,
+    which is what the chain rule demands -- and a round takes a run of them that
+    fits its bed (`net` in [NET_MIN, cap]).  A round costs `knife_kg` plus its bill,
+    so the laying is a shortest path over piece indices.  Returns
+    `(cost, oids, cuts)` with `oids` the laid pieces and `cuts` the piece index each
+    round ends at, or None when no laying fits inside `max_rounds`.
+    """
+    oids, lengths = [], [0.0]
+    for oid in sequence:
+        for _ in range(-(-floors[oid] // count)):
+            oids.append(oid)
+            lengths.append(lengths[-1] + float(sizes[oid]))
+    if not oids:
+        return None
+    rows = [0.0] + [float('inf')] * len(oids)
+    back = [-1] * (len(oids) + 1)
+    for b in range(1, len(oids) + 1):
+        for a in range(b - 1, -1, -1):
+            net = lengths[b] - lengths[a]
+            if net < NET_MIN - 1e-9:
+                continue
+            if net > cap + 1e-9:
+                break
+            if rows[a] == float('inf'):
+                continue
+            cand = rows[a] + knife_kg + math.ceil(
+                ((net + 2.0) * count * lin - EPS) / weight) * weight
+            if cand < rows[b]:
+                rows[b] = cand
+                back[b] = a
+    if rows[len(oids)] == float('inf'):
+        return None
+    cuts, at = [], len(oids)
+    while at > 0:
+        cuts.append(at)
+        at = back[at]
+    if len(cuts) > max_rounds:
+        return None
+    cuts.reverse()
+    return rows[len(oids)] + knife_kg * len(oids), oids, cuts
+
+
+def requantize_cuts(plan, orders, blanks, max_rounds=6, knife_kg=KNIFE_KG, reach=3):
+    """Re-solve each scheme at the count that minimises its knives plus its bill.
+
+    The re-cuts above move cut positions only: the pieces a scheme carries are
+    whatever the trim left behind, so its segment total stands.  But an order
+    that must deliver `P` pieces needs only `ceil(P / count)` segments, so a
+    taller count is a shorter set of segments -- up to one knife per order per
+    count step, and the counts here sit on floors the trim pushed them down to.
+    The taller count is not free: every round bills `(net + 2) * count * lin`,
+    so it taxes the whole scheme, not just the rounds that order rides.  This
+    pass prices the two against each other in the score's own unit (one knife ~
+    `knife_kg` of declared mass): it re-solves the scheme at every count from
+    `reach` below its current minimum up to the width cap `2000 / dia`, keeps
+    the cheapest total, and rewrites only when that beats what the scheme costs
+    now.  Rounds the cut would overflow are refused, as is a rewrite that stops
+    an order sharing a round (coverage is worth more than a knife).
+    """
+    sizes = {oid: o['size'] for oid, o in orders.items()}
+    rewritten = 0
+    for batch in plan:
+        first = batch['orders'][0]
+        lin = float(orders[first]['linear'])
+        lin_d = orders[first]['linear']
+        dia = float(orders[first]['dia'])
+        weight_d = blanks[batch['blank_type']]
+        weight = float(weight_d)
+        sequence = []
+        for scheme in batch['length_scheme']:
+            for oid in scheme:
+                if oid not in sequence:
+                    sequence.append(oid)
+        if sorted(sequence) != sorted(batch['orders']):
+            continue                    # not a chain this pass can re-lay
+        want = {oid: orders[oid]['pieces'] for oid in sequence}
+        segments_now = 0
+        bill_now = 0
+        for scheme, count in zip(batch['length_scheme'], batch['counts']):
+            for oid, length in scheme.items():
+                segments_now += pieces_of(length, sizes[oid])
+            bill_now += blank_bill((sum(D(str(v)) for v in scheme.values()) + 2) * count * lin_d,
+                                   weight_d)
+        rounds_now = len(batch['length_scheme'])
+        cost_now = knife_kg * (segments_now + rounds_now) + float(bill_now)
+        best = None
+        lo = max(1, min(batch['counts']) - reach)
+        for count in range(lo, int(2000.0 / dia) + 1):
+            cap = min(NET_MAX, BED_KG / (count * lin) - 2.0)
+            if cap < NET_MIN - 1e-9:
+                continue
+            laid = lay_pieces(sequence, sizes, want, count, lin, weight, cap,
+                              max_rounds, knife_kg)
+            if laid is None:
+                continue
+            total, _, cuts = laid
+            if best is None or total < best[0]:
+                best = (total, count, laid)
+        if best is None or best[0] >= cost_now - 1.0:
+            continue                    # a gain the float bill cannot separate from noise
+        total, count, (total, oids, cuts) = best
+        rounds, start = [], 0
+        for end in cuts:
+            rounds.append(to_lengths(span_counts(oids, start, end), sizes))
+            start = end
+        if not covered_orders(batch['length_scheme']) <= covered_orders(rounds):
+            continue
+        batch['length_scheme'] = rounds
+        batch['counts'] = [count] * len(rounds)
+        batch['blank_counts'] = [
+            int((((sum((D(str(v)) for v in scheme.values()), D(0)) + 2) * count * lin_d - D('1e-7'))
+                 / weight_d).to_integral_value(rounding='ROUND_CEILING'))
+            for scheme in rounds]
+        rewritten += 1
+    return rewritten
+
+
+def recount_rounds(plan, orders, blanks, max_rounds=6, knife_kg=KNIFE_KG):
+    """Drop each round to the count only its own orders need.
+
+    `requantize_cuts` gives a whole scheme one count -- the tallest its orders need
+    -- because that is what lets a moved cut leave every delivery alone.  A round
+    holding only short-delivery orders can bill less than that.  Write `s_o` for the
+    pieces an order keeps in the scheme and `floor_o = ceil(pieces_o / s_o)` for the
+    fewest pieces per bar that still reach its demand: any round counting that high
+    while holding it delivers, since `sum_r k_r * c_r >= floor_o * s_o >= pieces_o`.
+    So every round comes down to the tallest floor among its own orders -- free in
+    delivery, cheaper in the bill, and the bed limit loosens as the count falls, so
+    the DP that re-lays the rounds may pack longer ones too.  Pieces, orders and
+    cuts stay put in count; only the cut positions, counts and bills move.  The tally
+    below is re-derived with Decimal bills, so the pass can only be taken when it
+    really pays.
+    """
+    sizes = {oid: o['size'] for oid, o in orders.items()}
+    rewritten = 0
+    for batch in plan:
+        first = batch['orders'][0]
+        lin = float(orders[first]['linear'])
+        lin_d = orders[first]['linear']
+        dia = float(orders[first]['dia'])
+        weight_d = blanks[batch['blank_type']]
+        weight = float(weight_d)
+        sequence, pieces = [], {}
+        for scheme in batch['length_scheme']:
+            for oid, length in scheme.items():
+                pieces[oid] = pieces.get(oid, 0) + pieces_of(length, sizes[oid])
+                if oid not in sequence:
+                    sequence.append(oid)
+        if sorted(sequence) != sorted(batch['orders']):
+            continue                    # not a chain this pass can re-lay
+        floors = {oid: -(-orders[oid]['pieces'] // pieces[oid]) for oid in sequence}
+        if max(floors.values()) > int(2000.0 / dia):
+            continue                    # an order the width cannot deliver
+        oids, lengths, marks = [], [0.0], []
+        for oid in sequence:
+            marks.extend([floors[oid]] * pieces[oid])
+            for _ in range(pieces[oid]):
+                oids.append(oid)
+                lengths.append(lengths[-1] + float(sizes[oid]))
+        segments_now = len(oids)
+        bill_now = sum(blank_bill((sum(D(str(v)) for v in s.values()) + 2) * c * lin_d, weight_d)
+                       for s, c in zip(batch['length_scheme'], batch['counts']))
+        rounds_now = len(batch['length_scheme'])
+        cost_now = knife_kg * (segments_now + rounds_now) + float(bill_now)
+        table = _range_max_table(marks)
+        rows = [0.0] + [float('inf')] * len(oids)
+        back = [-1] * (len(oids) + 1)
+        for b in range(1, len(oids) + 1):
+            for a in range(b - 1, -1, -1):
+                net = lengths[b] - lengths[a]
+                if net < NET_MIN - 1e-9:
+                    continue
+                count = _range_max(table, a, b)
+                if net > min(NET_MAX, BED_KG / (count * lin) - 2.0) + 1e-9:
+                    break
+                if rows[a] == float('inf'):
+                    continue
+                cand = rows[a] + knife_kg + math.ceil(
+                    ((net + 2.0) * count * lin - EPS) / weight) * weight
+                if cand < rows[b]:
+                    rows[b] = cand
+                    back[b] = a
+        if rows[len(oids)] == float('inf'):
+            continue
+        cuts, at = [], len(oids)
+        while at > 0:
+            cuts.append(at)
+            at = back[at]
+        if len(cuts) > max_rounds:
+            continue
+        cuts.reverse()
+        rounds, counts, start = [], [], 0
+        for end in cuts:
+            scheme = to_lengths(span_counts(oids, start, end), sizes)
+            rounds.append(scheme)
+            counts.append(_range_max(table, start, end))
+            start = end
+        if not covered_orders(batch['length_scheme']) <= covered_orders(rounds):
+            continue
+        bills = [blank_bill((sum(D(str(v)) for v in scheme.values()) + 2) * count * lin_d, weight_d)
+                 for scheme, count in zip(rounds, counts)]
+        if cost_now <= knife_kg * segments_now + float(sum(bills)) + knife_kg * len(rounds) - 1.0:
+            continue                    # the taller counts bought more than they billed
+        batch['length_scheme'] = rounds
+        batch['counts'] = counts
+        batch['blank_counts'] = [
+            int((((sum((D(str(v)) for v in scheme.values()), D(0)) + 2) * count * lin_d - D('1e-7'))
+                 / weight_d).to_integral_value(rounding='ROUND_CEILING'))
+            for scheme, count in zip(rounds, counts)]
+        rewritten += 1
+    return rewritten
+
+
+def split_schemes(plan, orders, blanks):
+    """Let each stretch of a scheme weigh its own blanks.
+
+    A scheme bills every round against one blank weight, so it has one sawtooth
+    modulus: a round lands well only when its mass falls just over a multiple of
+    that weight, and the single best weight leaves the scheme's other rounds a
+    whole blank short.  Nothing in the rules asks for one weight across all of
+    them.  A scheme is capped at six rounds, and rule 10 is only that an order
+    appears in one scheme -- `used[oid] != 1` in the checker -- so a scheme may be
+    cut into stretches wherever no order straddles the cut, and each stretch may
+    take the blank weight that suits its own rounds.  Rounds, pieces and counts are
+    untouched; only the grouping and the declared bills change, and the DP takes a
+    cut only when the split bills strictly less.
+    """
+    weights = sorted(set(blanks.values()))
+    if len(weights) < 2:
+        return 0
+    out, split = [], 0
+    for batch in plan:
+        rounds, counts = batch['length_scheme'], batch['counts']
+        lin = orders[batch['orders'][0]]['linear']
+        n = len(rounds)
+        if n < 2:
+            out.append(batch)
+            continue
+        mats = [(sum(D(str(v)) for v in scheme.values()) + 2) * count * lin
+                for scheme, count in zip(rounds, counts)]
+
+        def best(i, j):
+            return min((sum(blank_bill(m, w) for m in mats[i:j]), w) for w in weights)
+
+        rows = [(None, -1)] + [(None, -1)] * n
+        rows[0] = (0, -1)
+        for j in range(1, n + 1):
+            for i in range(j - 1, -1, -1):
+                if i and set(rounds[i - 1]) & set(rounds[i]):
+                    continue            # an order straddles here: rule 10 forbids it
+                if rows[i][0] is None:
+                    continue
+                cost = rows[i][0] + best(i, j)[0]
+                if rows[j][0] is None or cost < rows[j][0]:
+                    rows[j] = (cost, i)
+        if rows[n][1] == 0:
+            out.append(batch)           # one stretch bills least; nothing to cut
+            continue
+        groups, at = [], n
+        while at > 0:
+            i = rows[at][1]
+            groups.append((i, at))
+            at = i
+        groups.reverse()
+        rows_cost = rows[n][0]
+        one_cost = best(0, n)[0]
+        if len(groups) < 2 or rows_cost >= one_cost:
+            out.append(batch)
+            continue
+        for i, j in groups:
+            _, weight = best(i, j)
+            names = []
+            for scheme in rounds[i:j]:
+                for oid in scheme:
+                    if oid not in names:
+                        names.append(oid)
+            piece = dict(batch)
+            piece['orders'] = names
+            piece['length_scheme'] = rounds[i:j]
+            piece['counts'] = counts[i:j]
+            piece['blank_type'] = next(t for t in sorted(blanks) if blanks[t] == weight)
+            piece['blank_counts'] = [
+                int(((mass - D('1e-7')) / weight).to_integral_value(rounding='ROUND_CEILING'))
+                for mass in mats[i:j]]
+            out.append(piece)
+        split += 1
+    if split:
+        plan[:] = out
+    return split
+
+
 def declared_total(plan, blanks):
     return sum((D(c) * D(str(blanks[b['blank_type']])) for b in plan for c in b['blank_counts']), D(0))
 
@@ -635,6 +929,12 @@ def main():
                     help='re-cut each uniform-count scheme into the fewest rounds first')
     ap.add_argument('--mixed-rounds', action='store_true',
                     help='re-cut every mixed-count scheme too, at each round\'s delivery floor')
+    ap.add_argument('--requant-cuts', action='store_true',
+                    help='re-solve every scheme at the count that minimises its knives plus its bill')
+    ap.add_argument('--recount-rounds', action='store_true',
+                    help='then drop every round to the tallest count its own orders need')
+    ap.add_argument('--split-schemes', action='store_true',
+                    help='cut each scheme where no order straddles, so each stretch weighs its own blanks')
     ap.add_argument('--no-drop-pieces', action='store_true',
                     help='keep the over-produced pattern pieces (each is a knife)')
     ap.add_argument('--no-lower-counts', action='store_true',
@@ -656,6 +956,15 @@ def main():
     if args.mixed_rounds:
         stats['mixed_coarsened'] = coarsen_mixed(plan, orders, blanks)
         stats['rounds_after_mixed'] = sum(len(b['length_scheme']) for b in plan)
+    if args.requant_cuts:
+        stats['requantized'] = requantize_cuts(plan, orders, blanks)
+        stats['rounds_after_requant'] = sum(len(b['length_scheme']) for b in plan)
+    if args.recount_rounds:
+        stats['recounted'] = recount_rounds(plan, orders, blanks)
+        stats['rounds_after_recount'] = sum(len(b['length_scheme']) for b in plan)
+    if args.split_schemes:
+        stats['schemes_split'] = split_schemes(plan, orders, blanks)
+        stats['batches_after_split'] = len(plan)
 
     def shift(tag, passes):
         out = reshape_plan(plan, orders, blanks, window=args.window, passes=passes,
@@ -697,22 +1006,34 @@ def main():
             net = sum((D(str(v)) for v in scheme.values()), D(0))
             if not D(48) <= net <= D(148):
                 raise SystemExit(f'round net {net} outside [48, 148]')
+        if len(batch['length_scheme']) > 6:
+            raise SystemExit(f'batch {batch["orders"][:3]} carries {len(batch["length_scheme"])} rounds')
     after = evaluate(plan, args.data, round_name=args.round)
-    if after['knives'] > before['knives']:
-        raise SystemExit(f'knives rose: {before["knives"]} -> {after["knives"]}')
+    declared_after = declared_total(plan, blanks)
+    # The passes trade knives against declared mass -- a taller count buys knives
+    # back but taxes every round it rides -- so the two are judged together, at
+    # the score's own rate: one knife ~ `KNIFE_KG` of declared mass.  Either term
+    # may rise as long as the pair comes out ahead.
+    cost_delta = (KNIFE_KG * (after['knives'] - before['knives'])
+                  + float(declared_after - declared_before))
+    if cost_delta > 1e-9:
+        raise SystemExit(f'cost rose: {after["knives"] - before["knives"]:+d} knives, '
+                         f'{float(declared_after - declared_before):+,.0f} kg declared '
+                         f'= {cost_delta:+,.0f} kg-equivalent')
     if after['coverage'] < before['coverage']:
         raise SystemExit(f'coverage fell: {before["coverage"]} -> {after["coverage"]}')
     if after['included_order_count'] != before['included_order_count']:
         raise SystemExit('included order count moved')
-    if any(len(b['length_scheme']) > k for b, k in zip(plan, shapes_before)):
-        raise SystemExit('round count rose')
 
     args.output.write_text(json.dumps(plan, ensure_ascii=False, separators=(',', ':')) + '\n',
                            encoding='utf-8')
     keys = ('yield_percent_rounded', 'coverage_percent_rounded', 'score_capped_display', 'violation_count')
     out = dict(input=str(args.input), output=str(args.output), excluded=len(excluded), **stats,
                declared_before=float(declared_before),
-               declared_after=float(declared_total(plan, blanks)),
+               declared_after=float(declared_after),
+               rounds_before=sum(shapes_before),
+               rounds_after=sum(len(b['length_scheme']) for b in plan),
+               cost_delta_kg_equivalent=cost_delta,
                before=dict(knives=before['knives'], **{k: before[k] for k in keys if k in before}),
                after=dict(knives=after['knives'], **{k: after[k] for k in keys if k in after}))
     text = json.dumps(out, ensure_ascii=False, indent=2, default=str)
