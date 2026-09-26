@@ -83,6 +83,9 @@ coarsen → coarsen_mixed → reshape → drop_pieces → reshape2 → repack_co
 | **+`split_schemes`（`_rf3` = `cand_rf3`）** | **184,521** | **93.65** | **99.83** | **92.11** |
 | +跨批重打包（`_rp3`，组成重排、每批从零切） | 184,510 | 93.65 | 99.85 | 92.1147 |
 | **+级联到不动点（`_rp4` = `cand_rp4`；与 `_rp2` 同字节）** | **184,510** | **93.65** | **99.85** | **92.1155** |
+| +共享遍历后级联到不动点（`_rp5` = `cand_rp5`） | 184,515 | 93.65 | **99.98** | 92.1406 |
+| +换轨迹：`--split-schemes` 早开（`_sp1` = `cand_sp1`） | 184,515 | 93.67 | 99.98 | 92.1508 |
+| **+换轨迹：`--recount-rounds` 放最后（`_qs1` = `cand_qs1`）** | **184,505** | **93.68** | **99.98** | **92.1554** |
 
 `_cand_full7` 细节：申报质量 551.68M → **545.43M kg**（−6.25M）；count 移动 7,142 次
 （6,967 降低 + 175 转移，账单增益 2.29M kg）；片段删除 179 + 切分点平移 418；剩余交付余量 **95,084 片**。
@@ -176,6 +179,11 @@ coarsen → coarsen_mixed → reshape → drop_pieces → reshape2 → repack_co
 
 `_rp5` 的盘面：**184,515 刀 / 10,211 轮 / 成材率 93.65% / 覆盖率 99.98% / 本地 92.1406**，
 严格校验零违规。它进队列为 `cand_rp5`（`a1753376`），比 `cand_rp4` 高 **+0.0251**。
+**不动点对「批次顺序」不敏感**（对「flag 顺序」敏感，见下面「轨迹」一节）：把 `_rp5` 的**批次顺序整体打乱**
+（两个随机种子）再跑完整条级联（shift → repack → shift → share → shift → shift），六步之后仍落在同一分数
+（两个种子都是 184,515 刀 / 99.98% / 92.1406）；同一顺序再跑一遍（`_rp6`）净变化 0.0。
+`share_orders` 的伙伴选择按"链长差 + 下标"定序，本来是唯一对输入顺序敏感的一步，实测也没有借顺序多买到一分。
+
 剩下 2 单买不到邻居，原因是**轮数预算**而不是价格：
 
 | 残余未共享 | 所在批 | 链长 / 六轮上限 | 为什么 |
@@ -195,6 +203,68 @@ coarsen → coarsen_mixed → reshape → drop_pieces → reshape2 → repack_co
    3.16M kg（1,430 / 2,107 批受益），但它**违反规则 10**（同一订单不得跨方案重复出现）——
    劈开意味着同一个批的订单出现在两个方案里。合法版本（只在批内**连通分量**处切）只值
    **39,128 kg ≈ 0.003 分**，还要为 22 个批重排轮序，性价比为零。
+
+## 轨迹：flag 的开启顺序决定落在哪个不动点（09-27 凌晨）
+
+上面那些分数都出自**一条**轨迹：先 `--min-rounds/--mixed-rounds`，再 `--requant-cuts`，再 `--recount-rounds`，
+最后 `--split-schemes`（每个 flag 各自迭代到不动点），然后才是跨批重打包与共享遍历。
+92.14 是这条路选出来的，还是这组遍历的地板？`runs/_traj.py <name>` 从同一个起点 `_iter11` 出发，
+把同一组遍历按八种顺序各跑到不动点（`runs/_traj_<name>.log`），落点如下（按分数降序，M/X 之后的顺序）：
+
+| 轨迹 | flag 顺序 | 最终本地分 | 刀 | 覆 |
+|---|---|---:|---:|---:|
+| **`qsplit`** | **Q → S → R（R 最后）** | **92.1554** | 184,505 | 99.98 |
+| `rsplit` | 重打包最先，再 S → R → Q | 92.1516 | 184,505 | 99.98 |
+| `splitfirst` | S → R → Q | 92.1508 | 184,515 | 99.98 |
+| `splitq` | S → Q → R | 92.1477 | 184,517 | 99.98 |
+| `recountfirst` | R → Q → S | 92.1429 | 184,511 | 99.98 |
+| `sharefirst` | 一次全开、共享优先 | 92.1415 | 184,515 | 99.98 |
+| `staged`（对照 = stored） | Q → R → S 分阶段 | 92.1406 | 184,515 | 99.98 |
+| `onebyone` | 逐面开（Q→R→S） | 92.1406 | 184,515 | 99.98 |
+
+三条结论：
+
+1. **对照轨迹逐位复现 stored 谱系**（`_rq*`/`_rc*`/`_rf*`/`_rp*` 每步的 `cost_delta` 与分数都对上），
+   所以表里的差异是搜索的差异，不是 harness 的。
+2. **读法：S 放最后最差，R 放最后最好。** `--split-schemes` 放最后的三条（`staged`/`onebyone`/
+   `recountfirst`）都停在 92.1406–92.1429；把 S 挪到 Q/R 之前，落点整档跳到 92.15；三个 flag 里
+   **R 放最后、S 在 Q 之后**（`qsplit`）最好。机制上讲得通：S 改的是**方案窗口的边界**，Q 与 R
+   都是在既定窗口里重解 —— 窗口一固定，`⌈·⌉` 的台阶就把它们锁住了，先分段 = 先给它们更好的窗口；
+   而 R（把每轮 count 压到下限）最后跑，等于把前两步腾出的余量再收一遍。
+3. **盆地宽 0.0148**（92.1406–92.1554）：92.14 不是这组遍历的地板，而是**一条轨迹的落点**。
+   在这台机器上，选对轨迹比再迭代一轮更值钱；下次搜索应从多条轨迹的不动点**集合**里挑最高，
+   而不是把单条轨迹迭代到死。
+
+最高的两个落点都严格校验零违规、都进了窗口的五发清单（见 `docs/CURRENT.md` 与
+`docs/WINDOW_RUNBOOK_20260927.md`）：`runs/_qs1.json`（= `cand_qs1`，队列 `6822d5cd`，
+sha256 `562747594a78de8ea230aac43741b3073a2cccc56c87bafef140bca241a49876`，本地
+**92.15543350668058**，2,265 批）与 `runs/_sp1.json`（= `cand_sp1`，队列 `d993957f`，
+本地 92.15077185148982）。`rsplit` 的落点 `runs/_trsplit6.json` 没打包（与它们同谱系，
+`aic.py build --input runs/_trsplit6.json` 30 秒可出）。
+**轨迹是可逐字节复现的**：`splitfirst` 整条链重跑一遍，最后一阶段的产物与第一次的哈希完全相同
+（`4db8d009f46b76de…`）。复现（每阶段跑到 stats 的 `cost_delta_kg_equivalent == 0.0` 即停；
+其余轨迹见 `runs/_traj.py` 的 `TRAJECTORIES`）：
+
+```bash
+# qsplit：Q 先、S 居中、R 最后（产出 runs/_tqsplit7.json = runs/_qs1.json）
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_iter11.json --min-rounds --mixed-rounds \
+  --requant-cuts --output runs/_tqsplit1.json --stats runs/_tqsplit1.stats.json
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_tqsplit1.json --min-rounds --mixed-rounds \
+  --requant-cuts --split-schemes --output runs/_tqsplit2.json --stats runs/_tqsplit2.stats.json
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_tqsplit2.json --min-rounds --mixed-rounds \
+  --requant-cuts --recount-rounds --split-schemes \
+  --output runs/_tqsplit3.json --stats runs/_tqsplit3.stats.json
+.venv/Scripts/python.exe tools/analysis/repack_batches.py runs/_tqsplit3.json \
+  --output runs/_tqsplit4.json --stats runs/_tqsplit4.stats.json
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_tqsplit4.json --min-rounds --mixed-rounds \
+  --requant-cuts --recount-rounds --split-schemes \
+  --output runs/_tqsplit5.json --stats runs/_tqsplit5.stats.json
+.venv/Scripts/python.exe tools/analysis/share_orders.py runs/_tqsplit5.json \
+  --output runs/_tqsplit6.json --stats runs/_tqsplit6.stats.json
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_tqsplit6.json --min-rounds --mixed-rounds \
+  --requant-cuts --recount-rounds --split-schemes \
+  --output runs/_tqsplit7.json --stats runs/_tqsplit7.stats.json   # 即 runs/_qs1.json = cand_qs1
+```
 
 ## 结构性天花板
 
@@ -229,13 +299,21 @@ coarsen → coarsen_mixed → reshape → drop_pieces → reshape2 → repack_co
 ## 复现
 
 ```bash
+# 一、每次只多开一个 flag，每阶段迭代到自己的不动点（这一段是 stored 谱系的真实走法）
 .venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_iter11.json --min-rounds --mixed-rounds \
-  --requant-cuts --recount-rounds --split-schemes \
-  --output runs/_rf3.json --stats runs/_rf3.stats.json
+  --output runs/_rq1.json --stats runs/_rq1.stats.json
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_rq1.json --min-rounds --mixed-rounds --requant-cuts \
+  --output runs/_rq2.json --stats runs/_rq2.stats.json      # 再跑一遍即 _rq3（= cand_rq3），净变化 0.0 即停
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_rq3.json --min-rounds --mixed-rounds --requant-cuts \
+  --recount-rounds --output runs/_rc1.json --stats runs/_rc1.stats.json       # → _rc2 → _rc3
+.venv/Scripts/python.exe tools/analysis/shift_cuts.py runs/_rc3.json --min-rounds --mixed-rounds --requant-cuts \
+  --recount-rounds --split-schemes --output runs/_rf1.json --stats runs/_rf1.stats.json  # → _rf2 → _rf3
 ```
 
-连跑到不动点（二次运行 net 变化 ≈ 0 即停）；`_rq3.json` 是只加 `--requant-cuts` 的中间固定点，
-`_rc3.json` 再加 `--recount-rounds`。`_cand_shift2.json` 由 `cand_rounded` 经同一脚本（`--min-rounds`）产生；
+**这条链不能塌成一次调用**：五个 flag 一次开全再迭代到不动点，落的是**相邻的另一个不动点
+92.1415**（见下面「轨迹」一节），不是 `_rf3`。92.11/92.14 这条线是**分阶段**走出来的，复现也要分阶段；
+`runs/_traj.py staged` 把每一阶段逐步打印出来（并把 `cost_delta` 与 stored 逐位对照）。
+`_cand_shift2.json` 由 `cand_rounded` 经同一脚本（`--min-rounds`）产生；
 `_iter1.json` 是 `_cand_full7` 的固定点；加 `--mixed-rounds` 后连跑即 `_iter11.json`（= `cand_iter11`）。
 其余四条谱系（`_cand_full2/full4/full8/shift2`）用同一条全命令各跑一遍，得到 `_p_*.json`
 （92.01–92.08，结构互不相同，作为窗口内的多样性保险）。
