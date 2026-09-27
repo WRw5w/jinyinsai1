@@ -824,21 +824,45 @@ def main():
     # merge
     paths = sorted(Path(args.patches).glob('*.json')) if Path(args.patches).is_dir() \
         else [Path(x) for x in args.patches.split(',')]
+
+    def ctx_of(bi):
+        """(sizes, dem, lin, cap_c) for one batch, in `evaluate`'s argument order."""
+        lin, cap_c, sizes, dem = batch_ctx(orders, plan[bi])
+        return sizes, dem, lin, cap_c
+
     patch = {}
     for path in paths:
         part = json.load(open(path, encoding='utf-8'))
         for k, v in part.items():
+            # Re-score each candidate with this build's objective before comparing:
+            # a patch written by an older revision (one that predates the coverage
+            # price, say) carries a `val` this build would not agree with, and the
+            # cheapest-looking stale entry would otherwise win the batch.
+            v = dict(v)
+            v['val'] = str(evaluate([(dict(kd), c) for kd, c in v['rounds']],
+                                    F(str(blanks[int(v['blank_type'])])),
+                                    *ctx_of(int(k)))[0])
             if k in patch and F(patch[k]['val']) <= F(v['val']):
                 continue
             patch[k] = v
     out = []
-    n_split = n_skip = 0
+    n_split = n_skip = n_flat = 0
     for bi, b in enumerate(plan):
         e = patch.get(str(bi))
         if e is None:
             out.append(b)
             continue
         lin, cap_c, sizes, dem = batch_ctx(orders, b)
+        # A patch is only ever emitted for a batch it improves on, but that verdict
+        # was reached by the revision that wrote it: re-check it against the base
+        # here too, so a patch from an older objective cannot ride in on a price
+        # this build no longer charges.
+        if not F(e['val']) < evaluate(load_state(b, sizes),
+                                      F(str(blanks[int(b['blank_type'])])), sizes,
+                                      dem, lin, cap_c)[0]:
+            n_flat += 1
+            out.append(b)
+            continue
         fields = state_to_fields([(dict(kd), c) for kd, c in e['rounds']],
                                  blanks[int(e['blank_type'])], sizes, orders, lin)
         nb = dict(b)
@@ -855,8 +879,8 @@ def main():
         out.extend(parts)
     json.dump(out, open(args.out, 'w', encoding='utf-8'), ensure_ascii=False)
     print(f'merge: {len(paths)} patch files, {len(patch)} improved batches, '
-          f'{n_split} split, {n_skip} skipped for legality -> {args.out} '
-          f'({len(out)} schemes)')
+          f'{n_split} split, {n_skip} skipped for legality, {n_flat} not better than '
+          f'the base -> {args.out} ({len(out)} schemes)')
 
 
 if __name__ == '__main__':
