@@ -198,7 +198,9 @@ Windows 形式，bash 重定向路径用 `/tmp/...` 即可。
 
 1. 把五发的实测分数、子分、与预测的偏差、以及"五发全部在 23:59 前完成"是否达成写进 `docs/CURRENT.md`；
    同步本手册与 `docs/SUBMISSION_PLAN_20260926.md` 的相关段落。
-2. `git commit`（message 末尾加 `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`）；
-   **不要 push `D:\new_mcp`**。
+2. `git commit`（message 末尾加 `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`），随后
+   **`git push origin semi-final`** 把项目仓库推上 GitHub（SSH 直连，已实测可用）；
+   **不要 push `D:\new_mcp`**。教训（2026-09-27 发现并补推）：09-26 19:10 之后 22 个提交
+   一直只 commit、没 push，GitHub 落后了一整天——收尾必须做完 push 这一步。
 3. 用中文向用户报告：五发各多少分、最好的一次是哪个包、官方榜面分变化、下一步建议。
    若有任何一发没发出去，如实说明并给出补救（比赛截止 2026-10-05 20:00，还有 8 个窗口日）。
