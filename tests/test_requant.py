@@ -483,5 +483,65 @@ class WorkingTreePassTests(unittest.TestCase):
         self.assertGreaterEqual(moved, 2, 'the descent should still improve the sample')
 
 
+class MergeKickTests(unittest.TestCase):
+    """The round-merging kick: the one move the descent's neighbourhood lacks.
+
+    `polish` deletes a round by scaling the survivors' piece counts, which leaves
+    their *schemes* fixed -- so a round can only be absorbed where a proportional
+    count of it already fits.  Two rounds of different orders can never be merged
+    that way, and the union scheme is what buys back a round's knife and its ceil
+    boundary at once.  `merge_kick` builds that union outright and lets the
+    descent repair it; these cases pin the union itself and then the whole pass on
+    the batch the search actually wins on.
+    """
+
+    def test_the_kick_drops_rounds_and_unions_the_schemes(self):
+        import random
+        st = [({'A': 2}, 5), ({'B': 3}, 4), ({'C': 1}, 7), ({'D': 4}, 2)]
+        got = rq.merge_kick(st, random.Random(0), depth=2)
+        self.assertEqual(len(got), 2, 'two rounds must be gone')
+        before = {(o): sum(kd.get(o, 0) for kd, _ in st) for kd, _ in st for o in kd}
+        after = {o: sum(kd.get(o, 0) for kd, _ in got) for o in before}
+        self.assertEqual(before, after, 'every piece count must land somewhere')
+        self.assertTrue(all(c in {5, 4, 7, 2} for _, c in got),
+                        'survivors keep their own counts; the merged one is gone')
+
+    def test_the_kick_declines_to_empty_a_small_batch(self):
+        import random
+        st = [({'A': 2}, 5), ({'B': 3}, 4)]
+        got = rq.merge_kick(st, random.Random(0), depth=2)
+        self.assertEqual(len(got), 2, 'a two-round batch has nothing to merge into')
+
+    def test_a_merge_beats_the_descent_on_the_batch_it_was_found_on(self):
+        # bi=1800 of plan_deep1: the descent is a fixpoint there, and the merge
+        # buys three rounds for the same bill (65 -> 62 knives, viol 0).  The
+        # whole plan is then re-checked, since the round count of a batch is a
+        # structural property the checker also has opinions about.
+        source = ROOT / 'artifacts/runs/requant/plan_deep1.json'
+        if not source.is_file():
+            self.skipTest('plan_deep1.json missing (gitignored tree)')
+        from platform_check import load_orders_and_blanks, check
+        orders, blanks, _, _ = load_orders_and_blanks(ROOT / 'data/semi', 'semi')
+        plan = json.loads(source.read_text(encoding='utf-8'))
+        bi = 1800
+        got = rq.improve_batch(orders, blanks, plan[bi], 0, 0, 8, w_try=2,
+                               merges=50, merge_depth=1, merge_seed=11)
+        self.assertIsNotNone(got, 'the merge should still improve bi=1800')
+        self.assertEqual(got['val'][3], 0, 'a candidate must be violation-free')
+        self.assertLess(got['val'][2], got['base'][0][2], 'the merge bought a round')
+        lin, cap_c, sizes, dem = rq.batch_ctx(orders, plan[bi])
+        b = dict(plan[bi])
+        b.update(rq.state_to_fields(got['state'], blanks[int(got['w'])], sizes,
+                                    orders, lin))
+        b['blank_type'] = int(got['w'])
+        parts = rq.split_scheme(b)
+        self.assertIsNotNone(parts)
+        for p in parts:
+            self.assertLessEqual(len(p['counts']), 6, 'clause 4: at most 6 rounds')
+        patched = [p for j, x in enumerate(plan) for p in (parts if j == bi else [x])]
+        res = check(patched, data=ROOT / 'data/semi', round='semi')
+        self.assertTrue(res['passed'], f'patched plan must check: {res["error_counts"]}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

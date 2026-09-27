@@ -622,7 +622,7 @@ def iterated_polish(st, w, sizes, dem, lin, cap_c, kicks, rng):
     return best
 
 
-def merge_kick(st, sizes, lin, cap_c, rng, depth=1):
+def merge_kick(st, rng, depth=1):
     """Delete `depth` rounds, re-homing each one's scheme into another round.
 
     `polish`'s only round-count move deletes a round by scaling the other rounds'
@@ -647,7 +647,7 @@ def merge_kick(st, sizes, lin, cap_c, rng, depth=1):
         for o, k in st[j][0].items():
             st[i][0][o] = st[i][0].get(o, 0) + k
         del st[j]
-    return st if len(st) < 3 or st else None
+    return st
 
 
 def iterated_merge(st, w, sizes, dem, lin, cap_c, kicks, rng, depth=1):
@@ -666,7 +666,7 @@ def iterated_merge(st, w, sizes, dem, lin, cap_c, kicks, rng, depth=1):
         if t % 2:
             cand = kick(best[1], sizes, lin, cap_c, rng)
         else:
-            cand = merge_kick(best[1], sizes, lin, cap_c, rng, depth)
+            cand = merge_kick(best[1], rng, depth)
         if cand is None:
             continue
         got = polish(cand, w, sizes, dem, lin, cap_c, allow_illegal=True)
