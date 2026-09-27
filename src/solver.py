@@ -295,11 +295,43 @@ class Config:
     continuity: bool = False
     coverage_shared: bool = False
     enforce_order_mass_floor: bool = False   # constraints.txt clause 8 (semi only)
-    # Semi-only: cap the yield numerator at each order's demand, matching
-    # `platform_score.row_metrics`/`_demand_numerator_mass`.  Off by default because
+    # Semi-only: cap the yield numerator at each order's demand.  Off by default because
     # the preliminary round is calibrated against an UNCAPPED numerator.  See
     # `_capped_finished` for the measured cost of leaving it off on the semi drop.
     cap_yield_numerator: bool = False
+    # WHICH convention the capped numerator is read in.  Both cap at a demand, but they
+    # cap at different things and the difference is neither uniform nor small:
+    #
+    #   'pieces_int'      min(delivered_pieces, demand_pieces) * size * linear_weight_int
+    #                     -- diameter truncated to whole mm, cap on the PIECE count.
+    #                     `platform_score.row_metrics` credits exactly this (it is the
+    #                     PRELIM round's reading), and every plan this repo has produced
+    #                     was optimised against it.
+    #   'mass_registered' min(delivered_pieces * size * linear_weight, order.weight)
+    #                     -- true diameter, cap on the order table's own registered
+    #                     weight in kg.  `platform_score.evaluate` -- the SEMI platform's
+    #                     real rule -- credits exactly this.
+    #
+    # The two differ by a per-order factor, measured over this drop
+    # (`tmp/_numconv_census.py`): the aggregate is 506,157,994 / 500,935,599 = +1.03%,
+    # but that average hides the distribution.  Whole-millimetre groups sit at ~+0.1%
+    # while a fractional diameter pays for its truncation in full -- SALE04 (d=27.8)
+    # +5.98%, AB-2 (d=38.83) +4.34%, C60 (d=26.5, 2,205 orders, 27% of the drop) +3.86%.
+    # On top of that the registered weight is not `pieces * size * linear_weight` per
+    # order: some orders carry up to 3% either way, so the two conventions disagree on
+    # the RELATIVE worth of two orders inside one chunk.
+    #
+    # Consequence: a chunk does not merely see a globally rescaled material/knife
+    # exchange rate, it sees a DIFFERENT one per group, and the search's offsets
+    # (`Config.numerator_offset`, computed from `DropAccounting`/`AnchorOffsets`) are
+    # expressed in whichever unit this convention fixes.  Mixing the two inside one plan
+    # would price a chunk's own numerator against a background quoted in the other
+    # convention, which is worse than either -- hence `solve_semi.score_fingerprint`
+    # carries this field so a cached chunk can never be replayed across a switch.
+    #
+    # Default 'pieces_int' reproduces every existing caller and every cached chunk
+    # bit for bit.
+    numerator_convention: str = 'pieces_int'
     # Which knife count the search pays for.  'intended' counts `Σk + 1` per round --
     # the physical number of cuts the plan means to make, and what `validate_plan`
     # recovers from the exported lengths.  'platform_floor' counts
@@ -343,6 +375,8 @@ class Config:
             raise ModelError("objective must be lex, score or platform_score")
         if self.knife_convention not in ('intended', 'platform_floor'):
             raise ModelError("knife_convention must be intended or platform_floor")
+        if self.numerator_convention not in ('pieces_int', 'mass_registered'):
+            raise ModelError("numerator_convention must be pieces_int or mass_registered")
         if self.objective in ('score','platform_score') and self.baseline_knives is None:
             raise ModelError("baseline_knives is required for score objectives")
 
@@ -676,23 +710,34 @@ def _capped_finished(model, batch):
     that appears in two schemes, so every round delivering to an order lives in the
     same `Batch` and `search_10s`'s incremental `current - before + after` stays
     valid.  `delivered` is an integer count of pieces and `order.pieces` is an int, so
-    `min` is exact -- no tolerance needed.
+    the piece cap is exact -- no tolerance needed.
+
+    WHICH quantity is capped is `Config.numerator_convention`; see there for what the
+    two conventions are and how far apart they are on this drop.  Only this function
+    and `solve_semi.order_info` read that field -- the physical checks in `make_round`
+    and `validate_plan` already work in true-diameter kilograms and do not move.
     """
     delivered = {}
     for r in batch.rounds:
         for i, k in zip(batch.ids, r.ks):
             if k:
                 delivered[i] = delivered.get(i, 0) + k * r.parallel
+    mass = model.cfg.numerator_convention == 'mass_registered'
     total = 0.0
     for i in batch.ids:
         order = model.orders[i]
-        # `linear_weight_int` (diameter truncated to whole mm), not `linear_weight`:
-        # that is the weight `platform_score.row_metrics`/`_demand_numerator_mass`
-        # actually credit, and the difference is not academic -- on the seeding-only
-        # drop the exact-diameter version reports a numerator of 506,504,659 kg against
-        # the platform's 500,935,599 kg, 1.1% too high, which would mis-set the yield
-        # level and, through `30 * D / R^2`, the price of raw as well.
-        total += min(delivered.get(i, 0), order.pieces) * order.size * order.linear_weight_int
+        n = delivered.get(i, 0)
+        if mass:
+            # What `platform_score.evaluate` credits: the physical mass this order
+            # received, capped at the weight the order table registers for it.
+            total += min(n * order.size * order.linear_weight, order.weight)
+        else:
+            # The preliminary reading.  `min(n, pieces) * size * lin_int` is the same
+            # number as `min(n * size * lin_int, pieces * size * lin_int)` -- both
+            # operands scale by the same positive float and n, pieces are ints, so the
+            # comparison cannot round differently -- but it is written the historical way
+            # so this branch stays bit-for-bit what every existing caller was scored on.
+            total += min(n, order.pieces) * order.size * order.linear_weight_int
     return total
 
 

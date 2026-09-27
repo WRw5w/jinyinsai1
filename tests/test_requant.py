@@ -80,6 +80,88 @@ class BillRuleTests(unittest.TestCase):
             self.assertGreaterEqual(rq.bill(mass, w), mass)
 
 
+class JointMoveScreenTests(unittest.TestCase):
+    """The float screen in front of the joint (k, count) move.
+
+    `evaluate` minimises `billed + KNIFE_KG * knives` with `knives = Σ k + 1` per
+    round, and the move changes the round's piece count by `-dn`, so a move is
+    worth the exact evaluation exactly when `bill_delta - dn * knife_kg` falls.
+    bi=1694 of plan_deep1 is the shape that made the old, sign-flipped screen
+    wrong: the move *spends* two knives to drop the round's bill a whole blank
+    multiple, so the bill saving (6,161 kg) is larger than the knives cost
+    (2 x 2,710) and only the correct sign sees it.
+
+    Two terms the round-local bill cannot price ride on top, and both were found
+    by breaking something: `frees_a_round` (a move that empties its round also
+    drops that round's `+1` knife -- without it bi=1800's merge disappears) and
+    the incumbent-legality gate (the screen prices bill against knives, which is
+    not what `better` compares while repairing a violation).
+    """
+
+    KNIFE = 2710.0
+
+    def test_a_bill_saving_move_that_spends_knives_is_worth_the_look(self):
+        # bi=1694: knives 79 -> 81, bill falls 6,161 kg, objective -741.
+        self.assertTrue(rq.worth_exact(-6161.0, -2, self.KNIFE))
+        self.assertAlmostEqual(-6161.0 - (-2) * self.KNIFE, -741.0)
+
+    def test_a_move_that_saves_knives_but_raises_the_bill_is_still_worth_it(self):
+        self.assertTrue(rq.worth_exact(0.0, 1, self.KNIFE))
+        self.assertTrue(rq.worth_exact(2700.0, 1, self.KNIFE))
+
+    def test_a_move_that_raises_the_bill_past_its_knife_saving_is_screened_out(self):
+        self.assertFalse(rq.worth_exact(2711.0, 1, self.KNIFE))
+        self.assertFalse(rq.worth_exact(9000.0, 1, self.KNIFE))
+        self.assertFalse(rq.worth_exact(0.0, -1, self.KNIFE))
+
+    def test_a_round_freeing_move_earns_that_rounds_own_knife(self):
+        # The move empties its round, so `evaluate` loses the round's `+1` as well:
+        # it can afford a bill rise of almost two knives, where the same move with
+        # a round left standing affords one.  `frees_a_round` implies `dn >= 1` --
+        # a round only empties when its sole order's piece count reaches zero --
+        # so every case below has dn >= 1.
+        self.assertTrue(rq.worth_exact(2 * self.KNIFE - 1.0, 1, self.KNIFE,
+                                       frees_a_round=True))
+        self.assertFalse(rq.worth_exact(2 * self.KNIFE - 1.0, 1, self.KNIFE))
+        self.assertTrue(rq.worth_exact(0.0, 1, self.KNIFE, frees_a_round=True))
+        self.assertTrue(rq.worth_exact(0.0, 1, self.KNIFE))
+
+    def test_the_screen_leaves_no_improving_move_on_the_floor(self):
+        # Exhaustive over the sign quadrants: a move is screened out only when its
+        # objective delta fails to fall, which is the definition of the screen.
+        for bill_delta in (-9000.0, -2710.0, -1.0, 0.0, 1.0, 2710.0, 9000.0):
+            for dn in (-3, -2, -1, 0, 1, 2, 3):
+                for frees in (False, True):
+                    with self.subTest(bill_delta=bill_delta, dn=dn, frees=frees):
+                        delta = bill_delta - (dn + int(frees)) * self.KNIFE
+                        self.assertEqual(
+                            rq.worth_exact(bill_delta, dn, self.KNIFE, frees_a_round=frees),
+                            delta < -0.5)
+
+    def test_the_descent_still_finds_the_move_the_old_screen_hid(self):
+        # The real state the inverted screen was measured on.  It is a regression
+        # guard, not a bound: it pins that the descent reaches 515,357 rather than
+        # the 516,099 the screen used to strand it on.
+        source = ROOT / 'artifacts/runs/requant/plan_deep1.json'
+        if not source.is_file():
+            self.skipTest('plan_deep1.json missing (gitignored tree)')
+        from platform_check import load_orders_and_blanks
+        orders, blanks, _, _ = load_orders_and_blanks(ROOT / 'data/semi', 'semi')
+        plan = json.loads(source.read_text(encoding='utf-8'))
+        b = plan[1694]
+        lin, cap_c, sizes, dem = rq.batch_ctx(orders, b)
+        st0 = rq.load_state(b, sizes)
+        w = F(str(blanks[b['blank_type']]))
+        base = rq.evaluate(st0, w, sizes, dem, lin, cap_c)
+        got = rq.polish(st0, w, sizes, dem, lin, cap_c)
+        self.assertIsNotNone(got, 'the batch must be a legal start')
+        self.assertEqual(got[0][3], 0, 'a candidate must be violation-free')
+        self.assertLess(got[0][0], base[0], 'the descent must still improve bi=1694')
+        self.assertGreater(got[0][2], base[2],
+                           'it buys the bill saving with a knife, which is the '
+                           'shape a sign-flipped screen cannot see')
+
+
 class SnapCountTests(unittest.TestCase):
     def test_snap_takes_the_lowest_count_that_lands_on_a_multiple(self):
         # 50 m of bed at 7 kg/m is 350 kg per piece; at w=1100 the counts 88..100
@@ -517,6 +599,12 @@ class MergeKickTests(unittest.TestCase):
         # buys three rounds for the same bill (65 -> 62 knives, viol 0).  The
         # whole plan is then re-checked, since the round count of a batch is a
         # structural property the checker also has opinions about.
+        #
+        # This is also the guard on the joint-move screen's legality gate: the
+        # merge is only reachable through a repair descent from an illegal kick,
+        # so a screen that prices bill against knives there strands it (measured:
+        # 65 -> 65 knives, i.e. this test fails) even though every other batch
+        # still improves.
         source = ROOT / 'artifacts/runs/requant/plan_deep1.json'
         if not source.is_file():
             self.skipTest('plan_deep1.json missing (gitignored tree)')

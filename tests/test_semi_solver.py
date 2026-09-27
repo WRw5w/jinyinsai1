@@ -22,9 +22,10 @@ never trips the overproduction ceiling.
 import math
 import unittest
 
-from solver import (Blank, Config, ModelError, Order, brute_force, search_10s,
-                    validate_plan)
-from solve_semi import AnchorOffsets, order_info
+from solver import (Batch, Blank, Config, ModelError, Order, Round, _capped_finished,
+                    brute_force, search_10s, validate_plan)
+from solve_semi import (AnchorOffsets, order_info, plan_capped_numerator,
+                        score_fingerprint)
 
 LINEAR = math.pi * (20 / 1000) ** 2 / 4 * 7850
 
@@ -224,6 +225,104 @@ class AnchorOffsetTests(unittest.TestCase):
         self.assertEqual(self.anchor.whole["knives"], 6.0 + 3.0)
         self.assertEqual(self.anchor.whole["covered"], 2.0)      # o1, o2 only
         self.assertEqual(self.anchor.whole["raw"], 1000.0 + 3000.0)
+
+
+class _Shim:
+    """Just enough of what `_capped_finished` reads off a model."""
+
+    def __init__(self, orders, cfg):
+        self.orders = {o.oid: o for o in orders}
+        self.cfg = cfg
+
+
+class NumeratorConventionTests(unittest.TestCase):
+    """The two readings of the capped yield numerator, and the guard between them.
+
+    `Config.numerator_convention` picks between the PRELIM reading (`pieces_int`:
+    cap on the PIECE count, diameter truncated to whole mm) and what
+    `platform_score.evaluate` -- the semi platform -- really credits
+    (`mass_registered`: true diameter, capped at the order table's registered weight).
+    Over the semi drop the two are 1.03% apart in aggregate but up to 6% apart per
+    group, and they disagree on the relative worth of two orders inside one chunk, so
+    this is an objective change and not a rescale.  Every plan this repo has produced
+    was optimised under `pieces_int`, which is why it stays the default.
+
+    `order()` registers a weight 0.25 pieces BELOW the geometric mass -- exactly the
+    gap the conventions disagree about: delivering every piece earns
+    `pieces * size * lin` under the piece cap but only `weight` under the mass cap.
+    """
+
+    def setUp(self):
+        self.orders = [order("o1", 8), order("o2", 5, dia=25.4)]
+        self.prelim = semi_cfg(numerator_convention="pieces_int")
+        self.mass = semi_cfg(numerator_convention="mass_registered")
+
+    def test_default_table_is_the_piece_convention(self):
+        """`cfg=None` must stay the historical table, or every cached chunk moves."""
+        for o in self.orders:
+            self.assertEqual(order_info([o])[o.oid],
+                             (o.size, o.size * o.linear_weight_int,
+                              o.pieces * o.size * o.linear_weight_int))
+            self.assertEqual(order_info([o], self.mass)[o.oid],
+                             (o.size, o.size * o.linear_weight, o.weight))
+
+    def test_full_delivery_is_capped_at_the_registered_weight(self):
+        plan = [scheme([{"o1": 16.0, "o2": 10.0}], ["o1", "o2"])]
+        mass = plan_capped_numerator(plan, order_info(self.orders, self.mass))
+        self.assertAlmostEqual(mass, sum(o.weight for o in self.orders), places=9)
+
+    def test_the_cap_is_the_registered_weight_not_the_geometric_mass(self):
+        """Whole-mm bars differ only at the cap, so the gap is exactly the quarter piece."""
+        whole = [order("o1", 8), order("o2", 5)]          # both dia 20 mm: no truncation
+        plan = [scheme([{"o1": 16.0, "o2": 10.0}], ["o1", "o2"])]
+        mass = plan_capped_numerator(plan, order_info(whole, self.mass))
+        pieces = plan_capped_numerator(plan, order_info(whole, self.prelim))
+        self.assertGreater(pieces, mass)
+        self.assertAlmostEqual(
+            pieces - mass,
+            sum(0.25 * o.size * o.linear_weight for o in whole), places=9)
+
+    def test_below_the_cap_only_the_truncation_shows(self):
+        """Under-delivering cannot bind the cap, so the two differ by the truncated diameter."""
+        f = order("f", 5, dia=25.4)
+        plan = [scheme([{"f": 4.0}], ["f"])]              # 2 of 5 pieces
+        mass = plan_capped_numerator(plan, order_info([f], self.mass))
+        pieces = plan_capped_numerator(plan, order_info([f], self.prelim))
+        self.assertLess(mass, f.weight)                   # the cap is provably not binding
+        self.assertAlmostEqual(mass / pieces, (25.4 / 25.0) ** 2, places=9)
+
+    def test_below_the_cap_the_conventions_agree_on_a_whole_mm_bar(self):
+        """Under-delivering cannot bind the cap, so a whole-mm order prices identically."""
+        o = order("w", 8)
+        plan = [scheme([{"w": 4.0}], ["w"])]      # 2 of 8 pieces
+        mass = plan_capped_numerator(plan, order_info([o], self.mass))
+        pieces = plan_capped_numerator(plan, order_info([o], self.prelim))
+        self.assertAlmostEqual(mass, pieces, places=9)
+        self.assertAlmostEqual(mass, 2 * o.size * o.linear_weight, places=9)
+
+    def test_capped_finished_follows_the_convention(self):
+        o = order("o1", 8)
+        round_ = Round((8,), 1, 1, 9, 0.0, 0.0)          # 8 pieces on one bar
+        batch = Batch(("o1",), 1, (round_,))
+        mass = _capped_finished(_Shim([o], self.mass), batch)
+        pieces = _capped_finished(_Shim([o], self.prelim), batch)
+        self.assertAlmostEqual(mass, o.weight, places=9)
+        self.assertAlmostEqual(pieces, 8 * o.size * o.linear_weight, places=9)
+
+    def test_score_fingerprint_separates_the_conventions(self):
+        """The cache key must move with the convention.
+
+        `solve_semi.solve_chunk` replays a cached chunk only when the fingerprint
+        matches, and the fingerprint has to include everything that changes what
+        `search_10s` returns.  A chunk solved under one convention and replayed under
+        the other would price its own numerator against offsets quoted in the other
+        unit -- the mix `Config.numerator_convention` exists to make impossible.
+        """
+        self.assertNotEqual(score_fingerprint(self.prelim), score_fingerprint(self.mass))
+
+    def test_unknown_convention_is_rejected(self):
+        with self.assertRaises(ModelError):
+            semi_cfg(numerator_convention="pieces_int_v2").validate()
 
 
 if __name__ == "__main__":

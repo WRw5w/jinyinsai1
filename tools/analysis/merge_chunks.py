@@ -86,7 +86,7 @@ def main():
     data = Path(args.data)
     orders = load_orders(str(data / 'orders.normalized.csv'), cfg, skip_invalid=True)
     blanks = load_blanks(str(data / 'blanks.normalized.csv'))
-    info = order_info(orders)
+    info = order_info(orders, cfg)
     blank_weights = {b.bid: b.weight for b in blanks}
     anchor_plan = json.loads(Path(args.anchor).read_text(encoding='utf-8'))
     anchor = AnchorOffsets(anchor_plan, info, blank_weights)

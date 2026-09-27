@@ -199,15 +199,36 @@ class AnchorOffsets:
         """No-op: the anchor is fixed, so the estimator never learns from a run."""
 
 
-def order_info(orders):
-    """`oid -> (size_m, scored_linear_weight_kg_per_m, demand_pieces)`.
+def order_info(orders, cfg=None):
+    """`oid -> (size_m, per_piece_kg, cap_kg)` -- one pairing for both conventions.
 
-    The weight is `linear_weight_int` -- the diameter truncated to whole millimetres --
-    because that is the weight `platform_score` credits in the yield numerator and in
-    the per-order demand ceiling.  Using the exact diameter instead over-states the
-    numerator by 1.1% on this drop.
+    Every formula that reads this table wants the same shape: the delivered piece
+    count times `per_piece_kg`, capped at `cap_kg`.  Which kilograms those are is
+    `Config.numerator_convention`:
+
+      * `pieces_int` (the default, and `cfg=None`) reproduces the PRELIM reading the
+        whole existing lineage was optimised against -- the diameter truncated to
+        whole millimetres, and the cap applied to the PIECE count,
+        `min(n, pieces) * size * linear_weight_int`;
+      * `mass_registered` is what `platform_score.evaluate`, the SEMI platform's real
+        rule, credits -- the true diameter, capped at the order table's own registered
+        weight, `min(n * size * linear_weight, order.weight)`.
+
+    Both are expressible as `min(n * per_piece, cap)` because the piece-convention cap
+    `pieces * per_piece` is the same float as `min(n, pieces) * per_piece` (same
+    positive scale, integer counts), so the default stays bit-for-bit.
+
+    `AnchorOffsets`/`DropAccounting` price a chunk's background through this table, so
+    it must be built with the SAME `cfg` the chunks are solved under: quoting a chunk's
+    numerator in one convention while its offsets sit in the other is the mixing
+    `Config.numerator_convention` warns about.  `_segments` reads slot 0 and so is
+    unaffected either way.
     """
-    return {o.oid: (o.size, o.linear_weight_int, o.pieces) for o in orders}
+    mass = cfg is not None and cfg.numerator_convention == 'mass_registered'
+    if mass:
+        return {o.oid: (o.size, o.size * o.linear_weight, o.weight) for o in orders}
+    return {o.oid: (o.size, o.size * o.linear_weight_int,
+                    o.pieces * o.size * o.linear_weight_int) for o in orders}
 
 
 def _segments(scheme, info):
@@ -235,14 +256,19 @@ def internal_knives(plan, info, platform_floor=True):
 
 
 def plan_capped_numerator(plan, info):
-    """Delivered mass with every order capped at its demand, as the semi-final scores it."""
+    """Delivered mass with every order capped at its demand, in `info`'s convention.
+
+    `info` is `order_info`'s table, so the unit follows whatever `cfg` built it with --
+    `pieces_int` for the prelim reading, `mass_registered` for the semi platform's.  See
+    `order_info`.
+    """
     delivered = {}
     for b in plan:
         for scheme, parallel in zip(b['length_scheme'], b['counts']):
             for oid, k in _segments(scheme, info).items():
                 delivered[oid] = delivered.get(oid, 0) + k * parallel
-    return sum(min(delivered[oid], info[oid][2]) * info[oid][0] * info[oid][1]
-               for oid in delivered)
+    return sum(min(n * info[oid][1], info[oid][2])
+               for oid, n in delivered.items())
 
 
 def plan_raw_mass(plan, blank_weights):
@@ -264,7 +290,7 @@ def score_fingerprint(cfg):
     """The part of `cfg` that changes what `search_10s` returns, as a compact string."""
     return (f"K{cfg.knife_offset:.1f}|D{cfg.numerator_offset:.1f}|R{cfg.raw_offset:.1f}|"
             f"C{cfg.covered_offset:.1f}|N{cfg.coverage_total or 0:.0f}|"
-            f"{int(cfg.cap_yield_numerator)}|{cfg.knife_convention}")
+            f"{int(cfg.cap_yield_numerator)}|{cfg.knife_convention}|{cfg.numerator_convention}")
 
 
 def solve_chunk(chunk, cfg, blanks, seconds, seed, cache_path, attempts=3, initial_plan=None):
@@ -393,15 +419,19 @@ def main():
     assembled = []
     per_group = []
     sizes = {o.oid: o.size for o in all_orders}
-    info = order_info(all_orders)
+    info = order_info(all_orders, cfg)
     blank_weights = {b.bid: b.weight for b in blanks}
     platform_floor = cfg.knife_convention == 'platform_floor'
     # `numerator_whole` is not a guess: the semis cap every order's yield credit at its
-    # demand, so the whole-drop numerator is exactly the sum of the per-order demand
-    # ceilings for any plan that delivers (verified: 500,935,598.6 both ways).  It is
-    # used by both estimators -- the anchored one as a cross-check, the share-scaled one
-    # because its `raw` offset is derived from it.
-    numerator_whole = sum(o.size * o.linear_weight_int * o.pieces for o in all_orders)
+    # demand, so the whole-drop numerator is exactly the sum of the per-order ceilings
+    # for any plan that delivers.  Reading it off `info` rather than recomputing it keeps
+    # it in whatever convention the chunks are being solved under -- the two conventions
+    # differ by 1.03% in aggregate (and by up to 6% per group), and the share-scaled
+    # estimator derives its `raw` offset from this number, so a mismatch here would put
+    # the chunk's numerator and its offsets in different units.  It is used by both
+    # estimators -- the anchored one as a cross-check, the share-scaled one because its
+    # `raw` offset is derived from it.
+    numerator_whole = sum(v[2] for v in info.values())
     if args.offset_mode == 'anchor':
         anchor_path = Path(args.offset_anchor)
         accounting = AnchorOffsets(json.loads(anchor_path.read_text(encoding='utf-8')),

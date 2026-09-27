@@ -83,6 +83,28 @@ def bill(m, w):
     return ceil_frac((m - F(1, 10 ** 7)) / w) * w
 
 
+def worth_exact(bill_delta, dn, knife_kg, frees_a_round=False):
+    """Does a joint (k, count) move deserve the exact evaluation?
+
+    `evaluate` minimises `billed + KNIFE_KG * knives` with `knives = Σ k + 1` per
+    round, so a move shifting a round's piece count by `-dn` (its count term is
+    knife-free) pays off exactly when `bill_delta - dn * knife_kg` falls.  The
+    screen is a pure predicate because getting its bill term's sign backwards
+    hides the moves that save a whole blank multiple while spending no knives --
+    those have `bill_delta < 0` and `dn < 0`, so every sign-flipped form rejects
+    them.
+
+    `frees_a_round` adds the round's own `+1` knife: the round-local bill cannot
+    see it, but `evaluate` charges it, so a move that empties its round saves
+    `dn + 1` knives and not `dn`.  (Such a move always has `dn >= 1`: a round
+    empties only when its sole order's piece count reaches zero.)  Omitting it
+    screens away exactly the round-dropping moves the descent exists to find --
+    bi=1800 of plan_deep1 is one, and the sign-flipped screen only reached it by
+    accident.
+    """
+    return bill_delta - (dn + (1 if frees_a_round else 0)) * knife_kg < -0.5
+
+
 def shared_orders(st):
     """Orders standing on some round beside at least one other order.
 
@@ -492,7 +514,13 @@ def polish(st, w, sizes, dem, lin, cap_c, passes=12, delete=True, allow_illegal=
                     if alive and mass > 60000:
                         continue
                     bill_new = math.ceil((mass - 1e-7) / fl_w) * fl_w
-                    if -dn * fl_knife + bill_r[j] - bill_new > -0.5:
+                    # The screen prices bill against knives, which is what `better`
+                    # compares -- but only while the incumbent is legal.  From an
+                    # illegal start (`allow_illegal`, the merge repair) `better`
+                    # wants the first legal state whatever it costs, and a bill
+                    # screen would block exactly the moves that clear the violation.
+                    if cur[3] == 0 and not worth_exact(bill_new - bill_r[j], dn,
+                                                       fl_knife, frees_a_round=not alive):
                         continue                       # cannot beat the knife cost
                     cand = [(dict(x), y) for x, y in st]
                     if kk:
