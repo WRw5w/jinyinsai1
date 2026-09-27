@@ -7,13 +7,17 @@
 队名 `鱼不吃猫`，参赛编号 `AIC-2026-93096493`，阶段 `semi`（AIC 2026 复赛·棒材组合订单
 高效锯切优化）。结果截止 2026-10-05 20:00，代码截止 2026-10-07 23:59。
 
+**送审版本**：仓库分支 `semi-final`，以 `docs/AUDIT_BRIEF_20260927.md` 这个文件最近一次
+提交为准（`git log -1 -- docs/AUDIT_BRIEF_20260927.md` 即本说明的版本号）。
+此后我们还会继续提交（今晚还有 4 发），**本文档里凡带时间戳的数字都只在那之前有效**。
+
 ---
 
 ## 0. 一句话
 
 本地最好计划 **92.4322**（`plan_deep1`，未提交），官方最高 **92.12**（`cand_rp4`，09-27 07:06
 实测，榜面第 28/40，榜首 93.79）。**评分公式已用五个包逐位对账确认**，今晚还有 4 次提交额度，
-排了 4 发（19:05 / 20:30 / 22:00 / 23:15）。第六波搜索（Wave H）正在跑。
+排了 4 发（19:05 / 20:30 / 22:00 / 23:15）。下一波搜索（Wave H）正在跑。
 
 ## 1. 状态快照（2026-09-27 14:00 北京时间）
 
@@ -29,7 +33,7 @@
 **今晚的 4 发**（09-27 平台上午故障、打分 19:00 后恢复，原 11:05/15:05 两跳已确认未发出并取消）：
 
 | 跳 | 时间 | 候选 | 队列 id | 本地预测 | 结构 |
-|---|---|---|---:|---|---:|---|
+|---|---|---|---:|---:|---|
 | ② | 19:05 | `cand_deep1` | `b7736779-…` | **92.4322** | 重定量招式（集中火力） |
 | ③ | 20:30 | `cand_cy1` | `e07bd9ea-…` | 92.1572 | **不带**重定量招式（家族对冲） |
 | ④ | 22:00 | `cand_extra2` | `e4665b24-…` | 92.4290 | 重定量招式（额外轮） |
@@ -88,9 +92,33 @@
 ### C4 账单是**逐轮**取整的
 
 - 证据：`tools/analysis/requant_batches.py:81`（`bill(m, w) = ceil((m − 1e-7)/w) · w`，
-  half-open、防浮点边界）；`runs/_requant_report.py:47` 在**轮循环里**累加 `billed += bill(m, w)`。
+  half-open、防浮点边界）；
+- 累加的位置是关键，而那个文件不在库里（`runs/` 被 .gitignore），所以把它**逐字抄在下面**
+  （`runs/_requant_report.py` 第 41–56 行，一个批次内的循环）：
+
+```python
+        for s, c in zip(b['length_scheme'], b['counts']):
+            R += 1
+            net = sum(F(str(v)) for v in s.values())
+            m = (net + 2) * int(c) * lin
+            M += m
+            trim_b += 2 * int(c) * lin
+            billed += bill(m, w)          # ← 第 47 行：逐轮累加，这就是平台的账单口径
+            for o, length in s.items():
+                k_total += int(F(str(length)) / F(str(orders[o]['size'])))
+                deliv[o] += int(F(str(length)) / F(str(orders[o]['size']))) * int(c)
+            if len(s) > 1:
+                shared.update(s)
+        mass += M
+        trim += trim_b
+        floor_cur += bill(M, w)           # ← 第 55 行：把整批的 M 合起来只取整一次（下界，非平台口径）
+        floor_min += bill(sum(F(str(orders[o]['weight'])) for o in names) + trim_b, w)
+```
+
+- 也就是说：`billed` 是 `Σ_轮 bill(该轮用料)`，而 `floor_cur` 是 `bill(该批总用料)`。
+  差额（4.84M kg）来自"合起来只取整一次"这个更宽松的算法，**平台不会这么算**。
 - 复现：`./.venv/Scripts/python.exe -X utf8 runs/_requant_report.py artifacts/runs/requant/plan_deep1.json`
-- 旁证：本地逐轮口径的成材率与官方**逐位相同**（§C2 的 15 项）。若平台是按批取整，两者不可能五包全等。
+- 旁证：本地**逐轮**口径的成材率与官方**逐位相同**（§C2 的 15 项）。若平台是按批取整，两者不可能五包全等。
 
 ### C5 「自己材料的地板」那 4.84M kg **不是可达靶**
 
@@ -128,7 +156,7 @@
 |---|---|---|---|
 | 五个已提交包的 ZIP 与计划 JSON | `artifacts/candidates/<候选>/` | §C2 的对账就是对这些 JSON 重算的 | 在库里有 `artifacts/accepted/official_scores.json` 记录了它们的哈希与回执；原始包需本机 |
 | `plan_deep1.json` 等计划（本地最高 92.4322） | `artifacts/runs/requant/` | §C1/C4/C5 的数字来源 | 需本机；`runs/_requant_report.py <plan>` 复算 |
-| `runs/_requant_report.py`、`_traj.py`、波次脚本、日志 | `runs/` | §C4/C5 的逐轮 vs 按批口径差就在这个文件里 | 需要的话可以把 `_requant_report.py` 移进 `tools/analysis/` 入库 |
+| `runs/_requant_report.py`、`_traj.py`、波次脚本、日志 | `runs/` | §C4/C5 的逐轮 vs 按批口径差就在这个文件里 | 决定性那 16 行已逐字抄进 §C4，无需本机即可核；整文件仍在本机 |
 | Wave C–H 的补丁与日志 | `artifacts/runs/requant/patches_*/`、`logs/` | §C6 的对照原始数据 | 需本机 |
 | 平台台账原卷 | `D:\new_mcp\submission_ledger.jsonl`（**另一个仓库，只读，不推**） | 所有官方分的最终原始记录 | 本机；或在平台结果页按 `docs/WINDOW_RUNBOOK_20260927.md` 的命令重取 |
 
@@ -157,8 +185,8 @@ JSON 逐字节相同（`zip_payload_eq_loose_json: true`）。也就是说，**�
    修复过程见 `docs/ARCHIVE_AUDIT.md`、`docs/EVIDENCE.md`。请检查 `src/platform_check.py`
    是否还有未被回执证伪过的判据。
 4. **§C5 的推理链**（逐轮账单 ⇒ 4.84M kg 地板不可达）是全篇最长的推理。若平台其实按批
-   取整，结论就反转。请检查 `runs/_requant_report.py:47` 与 `:55` 这两行的差别是否真能
-   支撑「可达的只有轮数」这个结论。
+   取整，结论就反转。请检查 §C4 里逐字抄出的第 47 行（逐轮累加）与第 55 行（按批取整）
+   的差别是否真能支撑「可达的只有轮数」这个结论。
 5. **Wave H 的 12 工位是并行搜索**，其中 6 个用 `merge_kick`、6 个用纯 `kick`。若你发现
    `merge_kick` 产出的状态**违反某个我们在 `evaluate()` 里没建模的平台规则**，
    那 Wave H 的产物整体不可信。请重点看 `tools/analysis/requant_batches.py` 的
@@ -206,3 +234,15 @@ cd /d/02_Projects/ML/jinyinsai1_nolimit
 - 规则：[`docs/RULES.md`](RULES.md)　证据与存档审计：[`docs/EVIDENCE.md`](EVIDENCE.md)、
   [`docs/ARCHIVE_AUDIT.md`](ARCHIVE_AUDIT.md)
 - Edge 153 下载崩溃的证据链：[`docs/PIPE_ATTACHMENT_EDGE153.md`](PIPE_ATTACHMENT_EDGE153.md)
+
+## 8. 希望你给什么
+
+最有用的审核输出（按价值排序）：
+
+1. **逐条裁决** §2 的 C1–C7：哪几条你能从仓库内独立验证、哪几条你只能接受我们的说法
+   （后者请点名，我们好补证据）。
+2. **§4 红队清单里你实际能打穿哪一条**，以及我们没想到的错法。特别是 C2 的度量模型：
+   若你能从 `src/platform_score.py` + `data/semi/` 独立复算五包的分项，请直接给出你的数字，
+   与上面那张表对。
+3. **指出任何"结论跑在证据前面"的地方**——我们更怕被自己的口径骗，不怕被指出错误。
+4. 若发现问题，请给到 `文件:行号` 与一个可执行的判定命令，我们会当轮修复并回写文档。
