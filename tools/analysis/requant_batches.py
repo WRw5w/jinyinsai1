@@ -622,8 +622,62 @@ def iterated_polish(st, w, sizes, dem, lin, cap_c, kicks, rng):
     return best
 
 
+def merge_kick(st, sizes, lin, cap_c, rng, depth=1):
+    """Delete `depth` rounds, re-homing each one's scheme into another round.
+
+    `polish`'s only round-count move deletes a round by scaling the other rounds'
+    piece counts up, which keeps the survivor's *scheme* fixed: it can absorb a
+    round only when a proportional piece count of it already fits there.  Two
+    rounds of different orders can therefore never be merged by the descent --
+    the union scheme is a combination no single move reaches.  This kick makes
+    exactly that: round i keeps its count and takes over round j's per-bar piece
+    counts, so the bar now cuts both orders at once.  The result is generally
+    illegal (the union may overrun the 148 m / 60 t bed, or over-deliver), which
+    is the point -- `polish` with `allow_illegal` re-descends and repairs, and the
+    caller keeps it only when it comes back legal and cheaper.
+    """
+    st = [(dict(kd), c) for kd, c in st]
+    for _ in range(depth):
+        if len(st) < 3:
+            break
+        j = rng.randrange(len(st))
+        i = rng.randrange(len(st) - 1)
+        if i >= j:
+            i += 1                                  # i is any other round
+        for o, k in st[j][0].items():
+            st[i][0][o] = st[i][0].get(o, 0) + k
+        del st[j]
+    return st if len(st) < 3 or st else None
+
+
+def iterated_merge(st, w, sizes, dem, lin, cap_c, kicks, rng, depth=1):
+    """`iterated_polish` whose kicks are merge-kicks, mixed with plain kicks.
+
+    Half the kicks merge a round away (the move the descent cannot make), half
+    perturb a single round, so a merge that needs the ground prepared first is
+    still reachable.  Kept only when strictly better and legal, exactly as in
+    `iterated_polish`.
+    """
+    best = polish(st, w, sizes, dem, lin, cap_c)
+    if best is None:
+        return None
+    val = best[0][0]
+    for t in range(kicks):
+        if t % 2:
+            cand = kick(best[1], sizes, lin, cap_c, rng)
+        else:
+            cand = merge_kick(best[1], sizes, lin, cap_c, rng, depth)
+        if cand is None:
+            continue
+        got = polish(cand, w, sizes, dem, lin, cap_c, allow_illegal=True)
+        if got is not None and got[0][3] == 0 and got[0][0] < val:
+            best, val = got, got[0][0]
+    return best
+
+
 def improve_batch(orders, blanks, b, iters, seeds, rmax, w_try=2, seed_base=0,
-                  extra=0, kicks=0, kick_seed=0):
+                  extra=0, kicks=0, kick_seed=0, merges=0, merge_depth=1,
+                  merge_seed=0):
     """Best zero-violation state found for this batch, or None."""
     lin, cap_c, sizes, dem = batch_ctx(orders, b)
     st0 = load_state(b, sizes)
@@ -679,6 +733,13 @@ def improve_batch(orders, blanks, b, iters, seeds, rmax, w_try=2, seed_base=0,
                               cap_c, kicks, random.Random(kick_seed))
         if ils is not None and ils[0][3] == 0:
             offer(ils[1])
+    if merges:
+        # Same idea with the round-merging kick, from whatever the plain kicks
+        # left behind (they only ever improve `best`).
+        mg = iterated_merge(best[2], F(str(blanks[best[1]])), sizes, dem, lin,
+                            cap_c, merges, random.Random(merge_seed), merge_depth)
+        if mg is not None and mg[0][3] == 0:
+            offer(mg[1])
     if best[0][0] >= base[0][0]:
         return None
     return dict(val=best[0], w=best[1], state=best[2], base=base, lin=lin, sizes=sizes)
@@ -778,6 +839,12 @@ def main():
     p.add_argument('--kicks', type=int, default=0,
                    help='kicked restarts of the descent, kept when they beat it')
     p.add_argument('--kick-seed', type=int, default=0)
+    p.add_argument('--merges', type=int, default=0,
+                   help='round-merging restarts (delete a round into another '
+                        'one\'s scheme), mixed with plain kicks')
+    p.add_argument('--merge-depth', type=int, default=1,
+                   help='rounds removed per merging kick')
+    p.add_argument('--merge-seed', type=int, default=0)
 
     m = sub.add_parser('merge')
     m.add_argument('--plan', default='runs/_cy1.json')
@@ -802,7 +869,8 @@ def main():
             b = plan[bi]
             got = improve_batch(orders, blanks, b, args.iters, args.seeds, args.rmax,
                                 args.w_try, args.seed_base, args.extra_rounds,
-                                args.kicks, args.kick_seed)
+                                args.kicks, args.kick_seed, args.merges,
+                                args.merge_depth, args.merge_seed)
             if got is None:
                 continue
             n_imp += 1
