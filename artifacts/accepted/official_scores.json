@@ -1,0 +1,388 @@
+{
+  "note": "Official platform receipts for all five scored submissions of team 鱼不吃猫 (AIC-2026-93096493), semi stage. Copied verbatim from the score_captured rows of D:\\new_mcp\\submission_ledger.jsonl; the only change is attachmentUrl (removed, see redacted). local_projection is what our scorer reads off the frozen submitted bytes today, so the pair is directly comparable.",
+  "source": "D:\\new_mcp\\submission_ledger.jsonl",
+  "extracted_at": "2026-09-27T13:46:47+08:00",
+  "receipts": {
+    "cand_covprobe25": {
+      "candidate": "cand_covprobe25",
+      "ledger_row": {
+        "at": "2026-09-26T20:38:06+08:00",
+        "stage": "semi",
+        "team": "AIC-2026-93096493",
+        "status": "score_captured",
+        "submitted_at": null,
+        "score": 90.4,
+        "evaluated_at": "2026-09-26 20:37:02",
+        "sha256": "06b7db30a74321ccd021a685cc964ffba5a17ffb4c48a8a41358adf7eb726937",
+        "failure_reason": "可行; 锯切刀数=185233, 成材率=91.4%, 覆盖率=96.46%, 子分(刀/材/覆)=86.38/91.4/96.46",
+        "hash_attestation": "unverified-download-failed",
+        "note": "captured by tools/aic_attribute_score.py; attachment hash unverified (download.saveAs: Target page, context or browser has been closed); reason: pipe download.saveAs failed again for this row; newest DONE row for team/stage, evaluated 2026-09-26 20:37:02 = clicked_at+34s; 锯切刀数=185233/成材率=91.40%/覆盖率=96.46% match cand_covprobe25's blind prediction of ~90.40 exactly"
+      },
+      "raw_row": {
+        "team": "AIC-2026-93096493",
+        "stage": "semi",
+        "score": 90.4,
+        "status": "DONE",
+        "evaluated": "2026-09-26 20:37:02",
+        "title": "01",
+        "failureReason": "可行; 锯切刀数=185233, 成材率=91.4%, 覆盖率=96.46%, 子分(刀/材/覆)=86.38/91.4/96.46",
+        "fields": {
+          "": "",
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "分数": "90.4",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:37:02",
+          "失败原因": "-",
+          "操作": "详情"
+        },
+        "attachmentSha256": null,
+        "attachmentMatches": null,
+        "details": {
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "参赛作品简介（600字以内）": "",
+          "作品材料文件夹百度网盘链接（提交内容及形式详看官网，参赛作品提交通知）": "",
+          "分数": "90.4",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:37:02",
+          "失败原因": "",
+          "备注": "可行; 锯切刀数=185233, 成材率=91.4%, 覆盖率=96.46%, 子分(刀/材/覆)=86.38/91.4/96.46"
+        },
+        "attachmentError": "download.saveAs: Target page, context or browser has been closed"
+      },
+      "verification": {
+        "local_zip_sha256": "06b7db30a74321ccd021a685cc964ffba5a17ffb4c48a8a41358adf7eb726937",
+        "local_zip_eq_ledger_sha": true,
+        "platform_attachment_sha256": null,
+        "platform_matches_local_zip": false,
+        "zip_entries": [
+          "复赛结果_鱼不吃猫.json"
+        ],
+        "zip_payload_eq_loose_json": true,
+        "plan_json_sha256": "d1be396d08a8734f9238c141664c08c4f632bf62886884abb298eccfb8dc815a"
+      },
+      "redacted": {
+        "attachmentUrl": false,
+        "why": "a live download link to our own submitted package; the ledger original in D:\\new_mcp is untouched"
+      }
+    },
+    "cand_rp4": {
+      "candidate": "cand_rp4",
+      "ledger_row": {
+        "at": "2026-09-27T07:13:42+08:00",
+        "stage": "semi",
+        "team": "鱼不吃猫",
+        "status": "score_captured",
+        "submitted_at": null,
+        "score": 92.12,
+        "evaluated_at": "2026-09-27 07:06:22",
+        "sha256": "699c0e8ab78f10c72cb296657ba5698e182c01082b252a75812d43690f31f1a4",
+        "failure_reason": "可行; 锯切刀数=184510, 成材率=93.65%, 覆盖率=99.85%, 子分(刀/材/覆)=86.72/93.65/99.85",
+        "hash_attestation": "matched",
+        "note": "captured by tools/aic_attribute_score.py"
+      },
+      "raw_row": {
+        "team": "鱼不吃猫",
+        "stage": "semi",
+        "score": 92.12,
+        "status": "DONE",
+        "evaluated": "2026-09-27 07:06:22",
+        "title": "01",
+        "failureReason": "可行; 锯切刀数=184510, 成材率=93.65%, 覆盖率=99.85%, 子分(刀/材/覆)=86.72/93.65/99.85",
+        "fields": {
+          "": "",
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "分数": "92.12",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-27 07:06:22",
+          "失败原因": "-",
+          "操作": "详情"
+        },
+        "attachmentSha256": "699c0e8ab78f10c72cb296657ba5698e182c01082b252a75812d43690f31f1a4",
+        "attachmentMatches": true,
+        "details": {
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "参赛作品简介（600字以内）": "",
+          "作品材料文件夹百度网盘链接（提交内容及形式详看官网，参赛作品提交通知）": "",
+          "分数": "92.12",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-27 07:06:22",
+          "失败原因": "",
+          "备注": "可行; 锯切刀数=184510, 成材率=93.65%, 覆盖率=99.85%, 子分(刀/材/覆)=86.72/93.65/99.85"
+        },
+        "attachmentSource": "url-fetch",
+        "attachmentBytes": 126946
+      },
+      "verification": {
+        "local_zip_sha256": "699c0e8ab78f10c72cb296657ba5698e182c01082b252a75812d43690f31f1a4",
+        "local_zip_eq_ledger_sha": true,
+        "platform_attachment_sha256": "699c0e8ab78f10c72cb296657ba5698e182c01082b252a75812d43690f31f1a4",
+        "platform_matches_local_zip": true,
+        "zip_entries": [
+          "复赛结果_鱼不吃猫.json"
+        ],
+        "zip_payload_eq_loose_json": true,
+        "plan_json_sha256": "c22ac526e49c41be878f22133e6cc617057766be65d76a31a3308041d87ef3b5"
+      },
+      "redacted": {
+        "attachmentUrl": true,
+        "why": "a live download link to our own submitted package; the ledger original in D:\\new_mcp is untouched"
+      }
+    },
+    "cand_yieldprobe": {
+      "candidate": "cand_yieldprobe",
+      "ledger_row": {
+        "at": "2026-09-26T20:32:53+08:00",
+        "stage": "semi",
+        "team": "AIC-2026-93096493",
+        "status": "score_captured",
+        "submitted_at": null,
+        "score": 88.92,
+        "evaluated_at": "2026-09-26 20:31:18",
+        "sha256": "70ae23bc663ebe73018c7932309a4a9ddf106b23f9c93359486810a13b525747",
+        "failure_reason": "可行; 锯切刀数=185229, 成材率=87.21%, 覆盖率=97.43%, 子分(刀/材/覆)=86.38/87.21/97.43",
+        "hash_attestation": "unverified-download-failed",
+        "note": "captured by tools/aic_attribute_score.py; attachment hash unverified (download.saveAs: Target page, context or browser has been closed); reason: pipe download.saveAs failed again for this row; newest DONE row for team/stage, evaluated 2026-09-26 20:31:18 = clicked_at+5s; 锯切刀数=185229/成材率=87.21%/覆盖率=97.43% match cand_yieldprobe's local snap prediction"
+      },
+      "raw_row": {
+        "team": "AIC-2026-93096493",
+        "stage": "semi",
+        "score": 88.92,
+        "status": "DONE",
+        "evaluated": "2026-09-26 20:31:18",
+        "title": "01",
+        "failureReason": "可行; 锯切刀数=185229, 成材率=87.21%, 覆盖率=97.43%, 子分(刀/材/覆)=86.38/87.21/97.43",
+        "fields": {
+          "": "",
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "分数": "88.92",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:31:18",
+          "失败原因": "-",
+          "操作": "详情"
+        },
+        "attachmentSha256": null,
+        "attachmentMatches": null,
+        "details": {
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "参赛作品简介（600字以内）": "",
+          "作品材料文件夹百度网盘链接（提交内容及形式详看官网，参赛作品提交通知）": "",
+          "分数": "88.92",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:31:18",
+          "失败原因": "",
+          "备注": "可行; 锯切刀数=185229, 成材率=87.21%, 覆盖率=97.43%, 子分(刀/材/覆)=86.38/87.21/97.43"
+        },
+        "attachmentError": "download.saveAs: Target page, context or browser has been closed"
+      },
+      "verification": {
+        "local_zip_sha256": "70ae23bc663ebe73018c7932309a4a9ddf106b23f9c93359486810a13b525747",
+        "local_zip_eq_ledger_sha": true,
+        "platform_attachment_sha256": null,
+        "platform_matches_local_zip": false,
+        "zip_entries": [
+          "复赛结果_鱼不吃猫.json"
+        ],
+        "zip_payload_eq_loose_json": true,
+        "plan_json_sha256": "76733fda931a1e82a9401691c52e1557594ecb7d94d3de5e40521bcd7de9f14e"
+      },
+      "redacted": {
+        "attachmentUrl": false,
+        "why": "a live download link to our own submitted package; the ledger original in D:\\new_mcp is untouched"
+      }
+    },
+    "cand_covprobe": {
+      "candidate": "cand_covprobe",
+      "ledger_row": {
+        "at": "2026-09-26T20:35:30+08:00",
+        "stage": "semi",
+        "team": "AIC-2026-93096493",
+        "status": "score_captured",
+        "submitted_at": null,
+        "score": 89.87,
+        "evaluated_at": "2026-09-26 20:34:09",
+        "sha256": "8a49ea44ef3cd7a1eb5a6bb38b123ea935d8a874d3073e7b404e31c94e07c54d",
+        "failure_reason": "可行; 锯切刀数=185252, 成材率=91.41%, 覆盖率=93.81%, 子分(刀/材/覆)=86.37/91.41/93.81",
+        "hash_attestation": "unverified-download-failed",
+        "note": "captured by tools/aic_attribute_score.py; attachment hash unverified (download.saveAs: Target page, context or browser has been closed); reason: pipe download.saveAs failed again for this row; newest DONE row for team/stage, evaluated 2026-09-26 20:34:09 = clicked_at+10s; 锯切刀数=185252/成材率=91.41%/覆盖率=93.81% match cand_covprobe's local prediction (with the x1.0104 yield offset)"
+      },
+      "raw_row": {
+        "team": "AIC-2026-93096493",
+        "stage": "semi",
+        "score": 89.87,
+        "status": "DONE",
+        "evaluated": "2026-09-26 20:34:09",
+        "title": "01",
+        "failureReason": "可行; 锯切刀数=185252, 成材率=91.41%, 覆盖率=93.81%, 子分(刀/材/覆)=86.37/91.41/93.81",
+        "fields": {
+          "": "",
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "分数": "89.87",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:34:09",
+          "失败原因": "-",
+          "操作": "详情"
+        },
+        "attachmentSha256": null,
+        "attachmentMatches": null,
+        "details": {
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "参赛作品简介（600字以内）": "",
+          "作品材料文件夹百度网盘链接（提交内容及形式详看官网，参赛作品提交通知）": "",
+          "分数": "89.87",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:34:09",
+          "失败原因": "",
+          "备注": "可行; 锯切刀数=185252, 成材率=91.41%, 覆盖率=93.81%, 子分(刀/材/覆)=86.37/91.41/93.81"
+        },
+        "attachmentError": "download.saveAs: Target page, context or browser has been closed"
+      },
+      "verification": {
+        "local_zip_sha256": "8a49ea44ef3cd7a1eb5a6bb38b123ea935d8a874d3073e7b404e31c94e07c54d",
+        "local_zip_eq_ledger_sha": true,
+        "platform_attachment_sha256": null,
+        "platform_matches_local_zip": false,
+        "zip_entries": [
+          "复赛结果_鱼不吃猫.json"
+        ],
+        "zip_payload_eq_loose_json": true,
+        "plan_json_sha256": "1e466e1d72ce0352953ccc0c9a1e46ec3b1e6ffa9664a9e812d4133c6b852011"
+      },
+      "redacted": {
+        "attachmentUrl": false,
+        "why": "a live download link to our own submitted package; the ledger original in D:\\new_mcp is untouched"
+      }
+    },
+    "cand_rounded": {
+      "candidate": "cand_rounded",
+      "ledger_row": {
+        "at": "2026-09-26T20:30:05+08:00",
+        "stage": "semi",
+        "team": "AIC-2026-93096493",
+        "status": "score_captured",
+        "submitted_at": null,
+        "score": 90.59,
+        "evaluated_at": "2026-09-26 20:22:49",
+        "sha256": "e9d9e8305ef4a95c2c5d2236e3d7c2b2db9bf212c7259db75453c8c53bc72f39",
+        "failure_reason": "可行; 锯切刀数=185229, 成材率=91.39%, 覆盖率=97.43%, 子分(刀/材/覆)=86.38/91.39/97.43",
+        "hash_attestation": "unverified-download-failed",
+        "note": "captured by tools/aic_attribute_score.py; attachment hash unverified (download.saveAs: Target page, context or browser has been closed); reason: pipe download.saveAs failed 3/3 for this row (Target page, context or browser has been closed); row is the newest DONE row for this team/stage, evaluated 2026-09-26 20:22:49 = clicked_at+8.5s; 锯切刀数=185229/成材率=91.39%/覆盖率=97.43% match the local snap prediction for cand_rounded (sha e9d9e830…) exactly"
+      },
+      "raw_row": {
+        "team": "AIC-2026-93096493",
+        "stage": "semi",
+        "score": 90.59,
+        "status": "DONE",
+        "evaluated": "2026-09-26 20:22:49",
+        "title": "01",
+        "failureReason": "可行; 锯切刀数=185229, 成材率=91.39%, 覆盖率=97.43%, 子分(刀/材/覆)=86.38/91.39/97.43",
+        "fields": {
+          "": "",
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "分数": "90.59",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:22:49",
+          "失败原因": "-",
+          "操作": "详情"
+        },
+        "attachmentSha256": null,
+        "attachmentMatches": null,
+        "details": {
+          "年度": "2026",
+          "竞赛名称": "AIC-产业命题赛-AI＋钢铁",
+          "当前阶段": "复赛",
+          "赛道名称": "AI＋钢铁",
+          "赛题名称": "棒材组合订单高效锯切优化",
+          "参赛编号": "AIC-2026-93096493",
+          "团队名称": "鱼不吃猫",
+          "参赛作品名称（20字以内）": "01",
+          "参赛作品简介（600字以内）": "",
+          "作品材料文件夹百度网盘链接（提交内容及形式详看官网，参赛作品提交通知）": "",
+          "分数": "90.59",
+          "当前状态": "DONE",
+          "打分时间": "2026-09-26 20:22:49",
+          "失败原因": "",
+          "备注": "可行; 锯切刀数=185229, 成材率=91.39%, 覆盖率=97.43%, 子分(刀/材/覆)=86.38/91.39/97.43"
+        },
+        "attachmentError": "download.saveAs: Target page, context or browser has been closed"
+      },
+      "verification": {
+        "local_zip_sha256": "e9d9e8305ef4a95c2c5d2236e3d7c2b2db9bf212c7259db75453c8c53bc72f39",
+        "local_zip_eq_ledger_sha": true,
+        "platform_attachment_sha256": null,
+        "platform_matches_local_zip": false,
+        "zip_entries": [
+          "复赛结果_鱼不吃猫.json"
+        ],
+        "zip_payload_eq_loose_json": true,
+        "plan_json_sha256": "ed7bf9c67d0dd7e9263bfe47565fe7995b3fdd0e45ffbe2930e73deb68d1fbde"
+      },
+      "redacted": {
+        "attachmentUrl": false,
+        "why": "a live download link to our own submitted package; the ledger original in D:\\new_mcp is untouched"
+      }
+    }
+  }
+}
