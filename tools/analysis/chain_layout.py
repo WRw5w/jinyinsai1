@@ -97,12 +97,19 @@ def length_ceiling(count, linear_kg_per_m, lo=LO, hi=HI, bed_kg=60000.0):
     return max(lo, min(hi, mass_cap))
 
 
-def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None, rounds=None):
+def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None, rounds=None,
+           order=None):
     """Return new {order: length} rounds, or None if this scheme will not lay out.
 
     `sizes` maps order id -> 定尺 length in metres.  Pass `linear` (kg/m of the
     scheme's section) and `hi` is tightened to whatever the bed weight allows;
     otherwise the raw length band is used and some rounds come out overweight.
+
+    `order` overrides the chain: the sequence the orders are laid out in, and so
+    which order straddles which round boundary.  The default is by descending
+    total length, which is a choice, not a rule -- the seam identity it produces
+    is exactly what a chain rebuild wants to vary.  The sequence must name every
+    order in the scheme and nothing else.
     """
     if linear:
         hi = length_ceiling(scheme['counts'][0], linear, lo=lo, hi=hi)
@@ -133,7 +140,9 @@ def layout(scheme, sizes, lo=LO, hi=HI, cap=MAX_ROUNDS, linear=None, rounds=None
         return None
     target = total / k
 
-    seq = sorted(totals, key=lambda o: -totals[o])
+    seq = list(order) if order is not None else sorted(totals, key=lambda o: -totals[o])
+    if len(seq) != len(totals) or set(seq) != set(totals):
+        return None                # a chain that does not name every order exactly once
     remaining = dict(pieces)
     rounds, i = [], 0
     for j in range(k):
