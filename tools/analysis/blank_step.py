@@ -263,6 +263,18 @@ def true_score(path):
     return RR.stats(str(path))
 
 
+def bind_baseline():
+    """Point the dS reference (K0/M0) at the plan this run measures from.
+
+    `dS` is measured from a baseline's knives and bill; measuring a window of some
+    other plan against those constants prices it at the wrong exchange rate.
+    """
+    global K0, M0
+    b = true_score(ROOT / BASE_PLAN)
+    K0, M0 = b['knives'], int(round(float(b['billed'])))
+    return b
+
+
 def patch_plan(plan, bi, orders, blanks, st, win, res, meta):
     """Deep-copy `plan` with batch `bi`'s window re-cut to the result's config."""
     sizes_f = {o: F(str(orders[o]['size'])) for o in plan[bi]['orders']}
@@ -453,8 +465,11 @@ def main():
     s.set_defaults(func=cmd_select)
 
     args = ap.parse_args()
+    if getattr(args, 'plan', None):
+        globals()['BASE_PLAN'] = args.plan
     # `_requant_report` reads sys.argv at import; give it a valid path up front.
     sys.argv = ['_requant_report', str(ROOT / BASE_PLAN)]
+    bind_baseline()
     args.func(args)
 
 
