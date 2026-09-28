@@ -74,11 +74,16 @@ def best_window(batch, orders, blanks, window, spread, slack, cap_states, second
 
 
 def sweep_once(plan, orders, blanks, rnd, data, window, spread, slack, cap_states,
-               seconds, total_seconds):
-    """One full pass: apply every batch's best improving window, in place."""
+               seconds, total_seconds, batches=None):
+    """One full pass: apply every batch's best improving window, in place.
+
+    `batches` restricts the pass to those indices, which is how a KNOWN set of
+    moves is settled into a plan (rebuild the union, check it, score it) without
+    paying for a whole-plan sweep.
+    """
     applied, truncated, t0 = [], 0, time.time()
     n_batches = len(plan)
-    for bi in range(n_batches):
+    for bi in (range(n_batches) if batches is None else batches):
         if total_seconds and time.time() - t0 > total_seconds:
             print(f'[sweep budget] stopped at batch {bi}/{n_batches} '
                   f'({time.time() - t0:.0f}s of {total_seconds:.0f}s) -- UNDETERMINED')
@@ -117,9 +122,11 @@ def main():
     ap.add_argument('--seconds', type=float, default=120.0, help='per-window time cap')
     ap.add_argument('--iters', type=int, default=0, help='sweep cap (0 = until fixpoint)')
     ap.add_argument('--total-seconds', type=float, default=0.0)
+    ap.add_argument('--batches', help='comma list; restrict the sweep to these indices')
     ap.add_argument('--out', required=True, help='final plan (only written if it improved)')
     ap.add_argument('--json', help='per-sweep report')
     args = ap.parse_args()
+    sel = [int(x) for x in args.batches.split(',')] if args.batches else None
 
     data = Path(args.data)
     orders, blanks, _, _ = load_orders_and_blanks(data, args.round)
@@ -138,7 +145,7 @@ def main():
         print(f'--- sweep {it} ---')
         plan, applied, truncated, done = sweep_once(
             plan, orders, blanks, args.round, data, args.window, args.spread,
-            args.slack, args.cap_states, args.seconds, args.total_seconds)
+            args.slack, args.cap_states, args.seconds, args.total_seconds, sel)
         base = rebind(plan, scratch)
         swept_dS = sum(r['dS'] for r in applied)
         report.append(dict(sweep=it, applied=len(applied), truncated_windows=truncated,

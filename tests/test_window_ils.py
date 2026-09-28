@@ -84,5 +84,33 @@ class RebindingTests(unittest.TestCase):
         self.assertNotEqual(BS.K0, 184531)          # plan_deep1: the stale hard-coded value
 
 
+class BatchRestrictionTests(unittest.TestCase):
+    """`--batches` settles a known move set without paying for a whole sweep."""
+
+    def test_a_restricted_sweep_only_touches_the_listed_batches(self):
+        if not MERGE2.is_file():
+            self.skipTest('plan_merge2.json missing (gitignored tree)')
+        data = ROOT / 'data' / 'semi'
+        if not data.is_dir():
+            self.skipTest('data/semi missing')
+        from platform_check import load_orders_and_blanks, read_plan
+        orders, blanks, _, _ = load_orders_and_blanks(data, 'semi')
+        plan = read_plan(MERGE2)
+
+        # An empty list must change nothing -- that is the whole contract.
+        same, applied, truncated, done = wi.sweep_once(
+            plan, orders, blanks, 'semi', data, 2, 4, 3, 40000, 60, 0, [])
+        self.assertEqual(applied, [])
+        self.assertFalse(truncated)
+        self.assertTrue(done)
+        self.assertEqual(same, plan)
+
+        # bi=591 is a known improver (the full census over 9,144 windows found
+        # exactly 15, and this is the one the kicks gate also reproduced).
+        _, applied, _, _ = wi.sweep_once(
+            plan, orders, blanks, 'semi', data, 2, 4, 3, 40000, 60, 0, [591])
+        self.assertEqual([m['bi'] for m in applied], [591])
+
+
 if __name__ == '__main__':
     unittest.main()
