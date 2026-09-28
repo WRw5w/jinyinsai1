@@ -177,5 +177,27 @@ class ScreenTests(unittest.TestCase):
             self.assertIsInstance(a1, bool)
 
 
+class RelayCandidateTests(unittest.TestCase):
+    """The re-lay gate is loose on purpose: `val` is not the score's objective.
+
+    `val` prices a saw cut at ~2,710 kg-equivalent, the score's knife term at ~490,
+    so `val` over-prices cuts by ~5.5x.  Gating the re-lay on `val` would drop real
+    improvements (and keep some `val` wins the score rejects), so `val` is only a
+    slack gate here and the whole-plan score decides.
+    """
+
+    def test_a_val_worse_arm_inside_the_slack_is_still_considered(self):
+        self.assertTrue(CP.relay_candidate(1000.0, 1000.0 + 20000.0, 20000.0))
+
+    def test_a_val_worse_arm_beyond_the_slack_is_dropped(self):
+        self.assertFalse(CP.relay_candidate(1000.0, 1000.0 + 20000.5, 20000.0))
+
+    def test_a_val_better_arm_is_always_considered(self):
+        self.assertTrue(CP.relay_candidate(1000.0, 999.0, 0.0))
+
+    def test_zero_slack_admits_only_val_non_worsening_arms(self):
+        self.assertFalse(CP.relay_candidate(1000.0, 1000.5, 0.0))
+
+
 if __name__ == '__main__':
     unittest.main()

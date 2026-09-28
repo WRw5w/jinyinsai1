@@ -216,6 +216,19 @@ def splice(plan, bi, state, w, sizes, orders, lin):
     return out
 
 
+def relay_candidate(val0, val1, slack):
+    """Should arm A1's own state be scored as a whole-plan candidate?
+
+    `val` is this tool's batch objective, and it prices a saw cut at ~2,710
+    kg-equivalent; the score's knife term is worth only ~490 kg at this plan.  So
+    `val` over-prices cuts by ~5.5x, and an arm that `val` calls *worse* can still
+    be the better PLAN (and vice versa).  Judging the re-lay on `val` alone would
+    drop real improvements, so `val` is used here only as a loose gate --
+    `val1 - val0 <= slack` -- and `--out-relay` lets the whole-plan score decide.
+    """
+    return val1 - val0 <= slack
+
+
 def report_result(path, plan, data, rnd):
     """Check the plan in memory; score the bytes on disk, exactly as the judge does.
 
@@ -307,6 +320,11 @@ def main():
     ap.add_argument('--screen-top', type=int,
                     help='with --screen, only the N worst material-loss batches')
     ap.add_argument('--out', help='write the winning plan here (only on acceptance)')
+    ap.add_argument('--out-relay', help='write the plan here when the plain RE-LAY '
+                    '(arm A1) beats the plan on the whole-plan score; route A, not B')
+    ap.add_argument('--relay-slack', type=float, default=20000.0,
+                    help='with --out-relay, score A1 even if its `val` exceeds the '
+                    "control's by up to this much (see `relay_candidate`)")
     ap.add_argument('--json', help='per-arm report')
     args = ap.parse_args()
 
@@ -374,6 +392,24 @@ def main():
         sig1, val1 = boundary_sig(a1[1]), a1[0]
         print(f'A1 re-lay    val={float(val1[0]):,.1f} knife={val1[2]} '
               f'bill={float(val1[1]):,.0f} rounds={sig1[0]} ({time.time() - t0:.1f}s)')
+
+    # --- route A: the plain re-lay itself is cheaper than the plan ------------
+    if args.out_relay and a1 is not None and sig1 != sig0 \
+            and relay_candidate(float(val0[0]), float(val1[0]), args.relay_slack):
+        relay_plan = splice(plan, bi, a1[1], w, sizes, orders, lin)
+        rp = ROOT / args.out_relay
+        rp.write_text(json.dumps(relay_plan, ensure_ascii=False), encoding='utf-8')
+        rchk, rsc = report_result(rp, relay_plan, data, args.round)
+        _, bsc = report_result(ROOT / args.plan, plan, data, args.round)
+        gain = rsc['score'] - bsc['score']
+        if rchk['passed'] and gain > 0:
+            print(f'RELAY WIN   whole-plan {bsc["score"]:.4f} -> {rsc["score"]:.4f} '
+                  f'({gain:+.4f}), knives {bsc["knives"]} -> {rsc["knives"]}')
+            print(f'wrote {args.out_relay}')
+        else:
+            rp.unlink()
+            print(f'RELAY no    whole-plan {bsc["score"]:.4f} -> {rsc["score"]:.4f} '
+                  f'({gain:+.4f}), check_passed={rchk["passed"]}')
 
     # --- treatment arms: perturbed chains -------------------------------------
     cands = perturbations(seq, max_arms=args.max_arms)
