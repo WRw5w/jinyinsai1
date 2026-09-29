@@ -19,11 +19,12 @@ from fractions import Fraction as F
 from pathlib import Path
 
 from platform_check import load_orders_and_blanks
-from platform_score import evaluate
+from platform_score import evaluate, load_scoring_data
 
 ROOT = Path(__file__).resolve().parents[1]
 
 _TABLES = {}
+_SCORING = {}
 
 
 def default_data(round_name='semi'):
@@ -39,6 +40,19 @@ def tables(data_dir=None, round_name='semi'):
     return _TABLES[key]
 
 
+def scoring(data_dir=None, round_name='semi'):
+    """The scorer's own parsed context, cached.
+
+    Without this `evaluate` re-reads and re-parses both CSVs on every call, which
+    would make `metrics()` slower than the import-time load it replaces -- and it
+    is called once per candidate in a sweep.
+    """
+    key = (str(data_dir or default_data(round_name)), round_name)
+    if key not in _SCORING:
+        _SCORING[key] = load_scoring_data(Path(key[0]), round_name)
+    return _SCORING[key]
+
+
 def metrics(plan, data_dir=None, round_name='semi'):
     """Every headline number for one plan, from one call.
 
@@ -48,7 +62,8 @@ def metrics(plan, data_dir=None, round_name='semi'):
     """
     data_dir = Path(data_dir or default_data(round_name))
     orders, blanks, _excluded, _spec = tables(data_dir, round_name)
-    scored = evaluate(plan, data=data_dir, round_name=round_name)
+    scored = evaluate(plan, data=data_dir, round_name=round_name,
+                      scoring_data=scoring(data_dir, round_name))
 
     demand_kg = sum(F(str(orders[o]['weight'])) for o in orders)
     demand_geom = sum(F(str(orders[o]['pieces'])) * F(str(orders[o]['size']))
