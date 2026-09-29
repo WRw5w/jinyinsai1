@@ -180,13 +180,16 @@ def cut_packed(oids, orders, blanks, max_rounds=CAP_ROUNDS, knife_kg=sc.KNIFE_KG
 
 
 def cost_of(batches, orders, blanks, knife_kg=sc.KNIFE_KG):
-    """`knife_kg * knives + declared - COVER_BONUS * covered`: the score's rate.
+    """`knife_kg * knives + declared - COVER_BONUS * covered`: a proxy objective.
 
     The same prices `reshape_plan` searches on: a knife is worth `knife_kg` kg of
     declared mass, a kilogram is a kilogram, and an order that stops sharing a
-    round is worth `COVER_BONUS_KG` of it.  All three are the score's own marginal
-    rates at the current knives and yield, so a group that comes out cheaper here
-    comes out better on the board.
+    round is worth `COVER_BONUS_KG` of it.  These are NOT the score's marginal
+    rates at this plan's point: the default `knife_kg = sc.KNIFE_KG = 2,830`
+    over-prices a knife by ~6.7% against the score's own 2,651.92 kg, and
+    `COVER_BONUS_KG = 30,000` against the score's ~28,186.  A group that is cheaper
+    here is therefore *usually* better on the board but not always -- the exact
+    whole-plan score is what decides (see docs/CURRENT.md).
     """
     knives = declared = 0
     for batch in batches:

@@ -180,10 +180,10 @@ class ScreenTests(unittest.TestCase):
 class RelayCandidateTests(unittest.TestCase):
     """The re-lay gate is loose on purpose: `val` is not the score's objective.
 
-    `val` prices a saw cut at ~2,710 kg-equivalent, the score's knife term at ~490,
-    so `val` over-prices cuts by ~5.5x.  Gating the re-lay on `val` would drop real
-    improvements (and keep some `val` wins the score rejects), so `val` is only a
-    slack gate here and the whole-plan score decides.
+    `val` prices a saw cut at ~2,710 kg-equivalent, the score's knife term at
+    ~2,652, so `val` over-prices cuts by ~2.2%.  Gating the re-lay on `val` would
+    drop real improvements (and keep some `val` wins the score rejects), so `val`
+    is only a slack gate here and the whole-plan score decides.
     """
 
     def test_a_val_worse_arm_inside_the_slack_is_still_considered(self):

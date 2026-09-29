@@ -219,10 +219,11 @@ def splice(plan, bi, state, w, sizes, orders, lin):
 def relay_candidate(val0, val1, slack):
     """Should arm A1's own state be scored as a whole-plan candidate?
 
-    `val` is this tool's batch objective, and it prices a saw cut at ~2,710
-    kg-equivalent; the score's knife term is worth only ~490 kg at this plan.  So
-    `val` over-prices cuts by ~5.5x, and an arm that `val` calls *worse* can still
-    be the better PLAN (and vice versa).  Judging the re-lay on `val` alone would
+    `val` is this tool's batch objective, and it prices a saw cut at
+    `requant_batches.KNIFE_KG` = 2,710.58 kg-equivalent; the score's knife term is
+    worth `dS/dK / dS/dB` = 2,651.92 kg per knife at this plan's point.  So `val`
+    over-prices cuts by ~2.2%, and an arm that `val` calls slightly *worse* can
+    still be the better PLAN (and vice versa).  Judging the re-lay on `val` alone would
     drop real improvements, so `val` is used here only as a loose gate --
     `val1 - val0 <= slack` -- and `--out-relay` lets the whole-plan score decide.
     """
