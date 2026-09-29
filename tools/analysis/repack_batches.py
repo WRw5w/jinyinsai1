@@ -193,13 +193,16 @@ def cost_of(batches, orders, blanks, knife_kg=sc.KNIFE_KG):
     """
     knives = declared = 0
     for batch in batches:
-        weight = int(blanks[batch['blank_type']])
+        # exact blank weight: three of the five types are fractional (9,613.5 /
+        # 6,162.5 / 6,957.216 / 8,134.5 / 8,818.784).  `int()` here only shifts
+        # the ranking against the scorer, which bills on the exact weight.
+        weight = blanks[batch['blank_type']]
         for scheme in batch['length_scheme']:
             for oid, length in scheme.items():
                 knives += sc.pieces_of(length, orders[oid]['size'])
             knives += 1                          # one knife per round
         declared += sum(int(c) * weight for c in batch['blank_counts'])
-    return knife_kg * knives + declared - sc.COVER_BONUS_KG * len(covered(batches))
+    return knife_kg * knives + float(declared) - sc.COVER_BONUS_KG * len(covered(batches))
 
 
 def covered(batches):
